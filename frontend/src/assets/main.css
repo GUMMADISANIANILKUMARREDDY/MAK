@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@import './base.css';
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-weight: normal;
+}
+
+/* Global theme polish (works with existing components) */
+@layer base {
+  body {
+    margin: 0;
+    background: var(--color-background);
+    color: var(--color-text);
+  }
+}
+
+a,
+.green {
+  text-decoration: none;
+  color: var(--color-primary);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  }
+}
+
+/* Dashboard & role components: responsive tables and layout */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -0.5rem;
+  padding: 0 0.5rem;
+}
+
+.table-wrapper table {
+  min-width: 600px;
+}
+
+@media (max-width: 768px) {
+  .table-wrapper {
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+
+  .dashboard-content .content-block,
+  .content-block {
+    padding: 1rem !important;
+    margin: 0 -0.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+}
