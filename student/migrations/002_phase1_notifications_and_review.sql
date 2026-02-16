@@ -30,4 +30,3 @@ CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
 CREATE INDEX IF NOT EXISTS idx_task_assignments_status ON task_assignments(status);
 CREATE INDEX IF NOT EXISTS idx_modules_status ON modules(status);
-dd
