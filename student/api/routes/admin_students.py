@@ -25,12 +25,15 @@ def list_students(
     name: Optional[str] = Query(None, description="Search by first or last name"),
     email: Optional[str] = Query(None, description="Search by email"),
     userid: Optional[str] = Query(None, description="Search by userid"),
+    search: Optional[str] = Query(None, description="Search name, email, userid"),
+    sort: str = Query("userid", description="Sort field"),
+    order: str = Query("asc", description="asc or desc"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     _=Depends(require_role(["admin"])),
 ):
-    """Admin: List all students with filters and pagination."""
-    return get_all_students(name=name, email=email, userid=userid, page=page, limit=limit)
+    """Admin: List all students with filters, sort and pagination."""
+    return get_all_students(name=name, email=email, userid=userid, search=search, sort=sort, order=order, page=page, limit=limit)
 
 
 @router.get("/{userid}")

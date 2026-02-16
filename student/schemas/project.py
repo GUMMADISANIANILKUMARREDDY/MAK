@@ -90,3 +90,9 @@ class TaskStatusUpdateRequest(BaseModel):
 
 class TaskSubmissionRequest(BaseModel):
     notes: Optional[str] = None
+
+
+class TaskReviewRequest(BaseModel):
+    result: str  # "approved" | "rejected"
+    feedback: Optional[str] = None
+    score: Optional[int] = None

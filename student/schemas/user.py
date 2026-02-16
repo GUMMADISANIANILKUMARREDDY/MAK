@@ -50,4 +50,28 @@ class LoginResponse(BaseModel):
     success: bool
     message: str
     access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     user: Optional[UserResponse] = None
+
+
+class ResendOtpRequest(BaseModel):
+    email: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    otp: str
+    new_password: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

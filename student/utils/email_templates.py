@@ -93,3 +93,93 @@ def get_registration_otp_html(to_email: str, otp: str, otp_expire_minutes: int) 
 def get_registration_otp_subject() -> str:
     """Subject line for registration OTP email."""
     return f"Verify your email – Welcome to {APP_NAME}"
+
+
+def get_password_reset_otp_plain(otp: str, otp_expire_minutes: int) -> str:
+    """Plain-text body for password reset OTP."""
+    return f"""
+Password reset – {APP_NAME}
+
+Use this OTP to reset your password:
+
+    OTP: {otp}
+
+Valid for {otp_expire_minutes} minutes. If you did not request this, ignore this email.
+
+The {APP_NAME} Team
+""".strip()
+
+
+def get_password_reset_otp_subject() -> str:
+    return f"Password reset – {APP_NAME}"
+
+
+# --- Notification / activity emails ---
+
+def get_task_assigned_subject() -> str:
+    return f"New task assigned – {APP_NAME}"
+
+
+def get_task_assigned_plain(task_title: str, link: str = "") -> str:
+    body = f"You have been assigned a new task: {task_title}."
+    if link:
+        body += f"\n\nView task: {link}"
+    return f"{APP_NAME}\n\n{body}\n\nBest regards,\nThe {APP_NAME} Team"
+
+
+def get_task_status_changed_subject() -> str:
+    return f"Task status updated – {APP_NAME}"
+
+
+def get_task_status_changed_plain(task_title: str, status: str, link: str = "") -> str:
+    body = f"Task \"{task_title}\" status: {status}."
+    if link:
+        body += f"\n\nView: {link}"
+    return f"{APP_NAME}\n\n{body}\n\nBest regards,\nThe {APP_NAME} Team"
+
+
+def get_deadline_approaching_subject() -> str:
+    return f"Deadline approaching – {APP_NAME}"
+
+
+def get_deadline_approaching_plain(task_title: str, due_date: str, link: str = "") -> str:
+    body = f"Task \"{task_title}\" is due on {due_date}. Please complete or submit for review."
+    if link:
+        body += f"\n\nView task: {link}"
+    return f"{APP_NAME}\n\n{body}\n\nBest regards,\nThe {APP_NAME} Team"
+
+
+def get_task_reviewed_subject(approved: bool) -> str:
+    return f"Task {'approved' if approved else 'needs changes'} – {APP_NAME}"
+
+
+def get_task_reviewed_plain(task_title: str, approved: bool, feedback: str = "", link: str = "") -> str:
+    result = "approved" if approved else "returned for changes"
+    body = f"Your submission for task \"{task_title}\" has been {result}."
+    if feedback:
+        body += f"\n\nFeedback: {feedback}"
+    if link:
+        body += f"\n\nView task: {link}"
+    return f"{APP_NAME}\n\n{body}\n\nBest regards,\nThe {APP_NAME} Team"
+
+
+def get_student_added_to_team_subject() -> str:
+    return f"Added to a team – {APP_NAME}"
+
+
+def get_student_added_to_team_plain(team_name: str, link: str = "") -> str:
+    body = f"You have been added to team: {team_name}."
+    if link:
+        body += f"\n\nView: {link}"
+    return f"{APP_NAME}\n\n{body}\n\nBest regards,\nThe {APP_NAME} Team"
+
+
+def get_mentor_assigned_subject() -> str:
+    return f"Module assigned to you – {APP_NAME}"
+
+
+def get_mentor_assigned_plain(module_title: str, link: str = "") -> str:
+    body = f"You have been assigned as mentor to module: {module_title}."
+    if link:
+        body += f"\n\nView: {link}"
+    return f"{APP_NAME}\n\n{body}\n\nBest regards,\nThe {APP_NAME} Team"

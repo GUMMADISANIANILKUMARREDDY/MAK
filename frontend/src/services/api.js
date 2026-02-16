@@ -18,6 +18,28 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Refresh token on 401 and retry once (avoids circular import by using api instance)
+api.interceptors.response.use(
+  (res) => res,
+  async (err) => {
+    const original = err.config
+    if (err.response?.status === 401 && !original._retry && localStorage.getItem('refresh_token')) {
+      original._retry = true
+      try {
+        const ref = localStorage.getItem('refresh_token')
+        const { data } = await api.post('/auth/refresh', { refresh_token: ref })
+        if (data?.access_token) {
+          localStorage.setItem('access_token', data.access_token)
+          if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token)
+          original.headers.Authorization = `Bearer ${data.access_token}`
+          return api(original)
+        }
+      } catch (_) {}
+    }
+    return Promise.reject(err)
+  }
+)
+
 export const usersApi = {
   list(params) {
     return api.get('/admin/users/', { params }).then(res => res.data)
@@ -163,6 +185,9 @@ export const mentorApi = {
   getTaskAssignments(taskid) {
     return api.get(`/mentor/tasks/${taskid}/assignments`).then(res => res.data)
   },
+  reviewAssignment(assignmentId, data) {
+    return api.post(`/mentor/tasks/assignments/${assignmentId}/review`, data).then(res => res.data)
+  },
 }
 
 export const studentApi = {
@@ -175,19 +200,62 @@ export const studentApi = {
   updateStatus(assignment_id, status) {
     return api.put(`/student/tasks/${assignment_id}/update-status`, { status }).then(res => res.data)
   },
-  submit(assignment_id, notes) {
-    return api.post(`/student/tasks/${assignment_id}/submit`, { notes }).then(res => res.data)
+  submit(assignment_id, notes, file = null) {
+    const formData = new FormData()
+    if (notes != null) formData.append('notes', notes)
+    if (file) formData.append('file', file)
+    return api.post(`/student/tasks/${assignment_id}/submit`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(res => res.data)
+  },
+}
+
+export const notificationsApi = {
+  list(params = {}) {
+    return api.get('/notifications', { params }).then(res => res.data)
+  },
+  unreadCount() {
+    return api.get('/notifications/unread-count').then(res => res.data)
+  },
+  markRead(notificationId) {
+    return api.put(`/notifications/${notificationId}/read`).then(res => res.data)
+  },
+  markAllRead() {
+    return api.put('/notifications/read-all').then(res => res.data)
+  },
+}
+
+export const dashboardApi = {
+  getAdminStats() {
+    return api.get('/dashboard/admin-stats').then(res => res.data)
+  },
+  getManagerStats() {
+    return api.get('/dashboard/manager-stats').then(res => res.data)
+  },
+  getMentorStats() {
+    return api.get('/dashboard/mentor-stats').then(res => res.data)
+  },
+  getStudentStats() {
+    return api.get('/dashboard/student-stats').then(res => res.data)
   },
 }
 
 export const authService = {
   async login(credentials) {
     const response = await api.post('/auth/login', credentials)
-    return response.data
+    const data = response.data
+    if (data.access_token) localStorage.setItem('access_token', data.access_token)
+    if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token)
+    return data
   },
 
   async register(data) {
     const response = await api.post('/auth/register', data)
+    return response.data
+  },
+
+  async resendOtp(email) {
+    const response = await api.post('/auth/resend-otp', { email })
     return response.data
   },
 
@@ -199,6 +267,43 @@ export const authService = {
   async getMe() {
     const response = await api.get('/auth/me')
     return response.data
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    const response = await api.post('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+    return response.data
+  },
+
+  async forgotPassword(email) {
+    const response = await api.post('/auth/forgot-password', { email })
+    return response.data
+  },
+
+  async resetPassword(email, otp, newPassword) {
+    const response = await api.post('/auth/reset-password', {
+      email,
+      otp,
+      new_password: newPassword,
+    })
+    return response.data
+  },
+
+  async refreshToken() {
+    const refresh = localStorage.getItem('refresh_token')
+    if (!refresh) return null
+    const response = await api.post('/auth/refresh', { refresh_token: refresh })
+    const data = response.data
+    if (data.access_token) localStorage.setItem('access_token', data.access_token)
+    if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token)
+    return data
+  },
+
+  logout() {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
   },
 }
 

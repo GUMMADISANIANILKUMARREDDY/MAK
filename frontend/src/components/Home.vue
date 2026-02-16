@@ -2,8 +2,6 @@
 import { ref } from 'vue'
 import Login from './Login.vue'
 import Register from './Register.vue'
-import makLogo from '@/assets/mak-only.svg'
-
 const menuOpen = ref(false)
 const showAuthModal = ref(false)
 const authMode = ref('login') // 'login' or 'register'
@@ -85,8 +83,8 @@ const moreActions = ref([
     <nav class="nav">
       <div class="nav-container">
         <a href="/home" class="nav-logo">
-          <img class="logo-img" :src="makLogo" alt="MAK" />
-          <span class="nav-logo-text">Technologies</span>
+          <img class="logo-img" src="/mak-only.svg?v=2" alt="MAK" />
+          <span class="nav-logo-text">MAK Technologies</span>
         </a>
 
         <!-- Hamburger button - visible on small screens -->
@@ -286,7 +284,7 @@ const moreActions = ref([
     <footer class="site-footer">
       <div class="footer-container">
         <div class="footer-brand">
-          <img class="footer-logo" :src="makLogo" alt="MAK" />
+          <img class="footer-logo" src="/mak-only.svg?v=2" alt="MAK" />
           <p class="footer-tagline">Real-time experience & hackathons. We guide; we don’t place.</p>
         </div>
         <nav class="footer-nav" aria-label="Footer navigation">
@@ -379,7 +377,6 @@ const moreActions = ref([
   align-items: center;
   gap: 0.5rem;
   letter-spacing: -0.5px;
-  margin-left: -8.5rem; /* move logo and Technologies text further left */
   padding: 0 !important; /* override global <a> padding */
   border-radius: 0 !important;
   background: transparent !important;
@@ -405,13 +402,13 @@ const moreActions = ref([
   width: 140px;
   height: 62px;
   display: block;
+  object-fit: contain;
 }
 
 .nav-logo-text {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  margin-left: -0.7rem;
-  margin-top: 1.5rem;
+  margin-top: 0.25rem;
   letter-spacing: -0.02em;
   white-space: nowrap;
   background: linear-gradient(135deg, var(--blue), var(--teal), var(--orange));
@@ -419,6 +416,7 @@ const moreActions = ref([
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  color: #0f172a; /* fallback if gradient not supported */
 }
 
 .nav-links a {
@@ -1282,14 +1280,15 @@ const moreActions = ref([
     flex-wrap: nowrap;
   }
   .nav-logo {
-    margin-left: 0; /* avoid pushing off-screen on small devices */
+    gap: 0.35rem;
   }
   .logo-img {
     width: 112px;
     height: 50px;
+    object-fit: contain;
   }
   .nav-logo-text {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
   .hamburger {
     display: flex;

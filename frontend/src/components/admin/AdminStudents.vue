@@ -8,7 +8,7 @@ const error = ref('')
 const successMsg = ref('')
 const subTab = ref('list')
 
-const filters = ref({ name: '', email: '', userid: '', page: 1, limit: 20 })
+const filters = ref({ name: '', email: '', userid: '', search: '', sort: 'userid', order: 'asc', page: 1, limit: 20 })
 
 const addForm = ref({ userid: '', first_name: '', last_name: '', phone: '', email: '' })
 const bulkForm = ref({ students: [{ userid: '', first_name: '', last_name: '', phone: '', email: '' }] })
@@ -26,6 +26,9 @@ const fetchStudents = async () => {
     if (filters.value.name) params.name = filters.value.name
     if (filters.value.email) params.email = filters.value.email
     if (filters.value.userid) params.userid = filters.value.userid
+    if (filters.value.search) params.search = filters.value.search
+    params.sort = filters.value.sort
+    params.order = filters.value.order
     params.page = filters.value.page
     params.limit = filters.value.limit
     const res = await studentsApi.list(params)
@@ -156,9 +159,20 @@ const handleBulkDelete = async () => {
 
     <div v-show="subTab === 'list'" class="content-block">
       <div class="filters">
+        <input v-model="filters.search" placeholder="Search name, email, ID" @keyup.enter="fetchStudents" class="search-inp" />
         <input v-model="filters.userid" placeholder="User ID" @keyup.enter="fetchStudents" />
-        <input v-model="filters.name" placeholder="Search by name" @keyup.enter="fetchStudents" />
-        <input v-model="filters.email" placeholder="Search by email" @keyup.enter="fetchStudents" />
+        <input v-model="filters.name" placeholder="Name" @keyup.enter="fetchStudents" />
+        <input v-model="filters.email" placeholder="Email" @keyup.enter="fetchStudents" />
+        <select v-model="filters.sort" @change="fetchStudents">
+          <option value="userid">User ID</option>
+          <option value="first_name">First Name</option>
+          <option value="last_name">Last Name</option>
+          <option value="email">Email</option>
+        </select>
+        <select v-model="filters.order" @change="fetchStudents">
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </select>
         <button class="btn btn-primary" @click="fetchStudents">Search</button>
       </div>
       <div v-if="loading" class="loading">Loading...</div>

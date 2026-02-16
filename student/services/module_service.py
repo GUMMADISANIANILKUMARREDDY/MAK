@@ -23,10 +23,26 @@ def create_module(projectid: str, title: str, description: Optional[str], create
     return {"success": True, "message": "Module created", "module": result.data[0]}
 
 
-def get_project_modules(projectid: str, page: int = 1, limit: int = 50) -> dict:
-    """Get all modules in a project."""
+def get_project_modules(
+    projectid: str,
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    sort: str = "created_at",
+    order: str = "desc",
+    page: int = 1,
+    limit: int = 50,
+) -> dict:
+    """Get all modules in a project with filters and sort."""
+    query = supabase.table("modules").select("*").eq("projectid", projectid)
+    if search and search.strip():
+        q = search.strip()
+        query = query.or_(f"title.ilike.%{q}%,description.ilike.%{q}%")
+    if status:
+        query = query.eq("status", status)
+    sort_col = sort if sort in ("created_at", "updated_at", "due_date", "title") else "created_at"
+    desc = order.lower() == "desc"
     offset = (page - 1) * limit
-    result = supabase.table("modules").select("*").eq("projectid", projectid).range(offset, offset + limit - 1).order("created_at", desc=True).execute()
+    result = query.range(offset, offset + limit - 1).order(sort_col, desc=desc).execute()
     return {"success": True, "modules": result.data or [], "page": page, "limit": limit}
 
 
@@ -76,6 +92,13 @@ def assign_module_to_mentor(moduleid: str, mentor_userid: str, assigned_by: str)
 
     if not result.data:
         return {"success": False, "message": "Failed to assign module"}
+    try:
+        mod_row = supabase.table("modules").select("title").eq("moduleid", moduleid).limit(1).execute()
+        module_title = mod_row.data[0]["title"] if mod_row.data else "Module"
+        from services.notification_service import notify_mentor_assigned
+        notify_mentor_assigned(mentor_userid, module_title, link="")
+    except Exception:
+        pass
     return {"success": True, "message": "Module assigned to mentor", "assignment": result.data[0]}
 
 

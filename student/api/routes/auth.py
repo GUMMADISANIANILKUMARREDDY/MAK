@@ -1,13 +1,37 @@
 from fastapi import APIRouter, Depends, HTTPException
-from schemas.user import LoginRequest, StudentRegisterRequest, VerifyEmailRequest, AdminAddUserRequest, LoginResponse, UserResponse
-from services.auth_service import login_user, create_access_token, register_student, verify_email_otp, admin_add_user
-from api.dependencies import get_current_user, require_role
+from schemas.user import (
+    LoginRequest,
+    StudentRegisterRequest,
+    VerifyEmailRequest,
+    AdminAddUserRequest,
+    LoginResponse,
+    UserResponse,
+    ResendOtpRequest,
+    ChangePasswordRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    RefreshTokenRequest,
+)
+from services.auth_service import (
+    login_user,
+    create_access_token,
+    create_refresh_token,
+    verify_refresh_token,
+    register_student,
+    verify_email_otp,
+    resend_otp,
+    change_password,
+    forgot_password,
+    reset_password,
+    admin_add_user,
+)
+from api.dependencies import get_current_user, require_role, rate_limit_auth
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/register")
-def register_student_api(data: StudentRegisterRequest):
+def register_student_api(data: StudentRegisterRequest, _=Depends(rate_limit_auth)):
     """Student registration step 1: validate, store pending, send OTP to email."""
     result = register_student(
         userid=data.userid,
@@ -32,8 +56,8 @@ def verify_email_api(data: VerifyEmailRequest):
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(data: LoginRequest):
-    """Login API - accept userid or email with password. Fetches user, verifies password, returns JWT."""
+def login(data: LoginRequest, _=Depends(rate_limit_auth)):
+    """Login API - accept userid or email with password. Returns JWT and refresh token."""
     if not data.userid and not data.email:
         raise HTTPException(status_code=400, detail="Provide userid or email")
     user = login_user(data.userid, data.email, data.password)
@@ -48,11 +72,79 @@ def login(data: LoginRequest):
             "username": user["username"],
         }
     )
+    refresh_token = create_refresh_token(user["userid"])
 
     return LoginResponse(
         success=True,
         message="Login successful",
         access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserResponse(
+            userid=user["userid"],
+            username=user["username"],
+            email=user["email"],
+            role=user["role"],
+            active=user["active"],
+        ),
+    )
+
+
+@router.post("/resend-otp")
+def resend_otp_api(data: ResendOtpRequest, _=Depends(rate_limit_auth)):
+    """Resend OTP for pending registration (same email)."""
+    result = resend_otp(data.email)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
+
+@router.post("/change-password")
+def change_password_api(data: ChangePasswordRequest, user: dict = Depends(get_current_user)):
+    """Change password for logged-in user (current + new password)."""
+    result = change_password(user["sub"], data.current_password, data.new_password)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
+
+@router.post("/forgot-password")
+def forgot_password_api(data: ForgotPasswordRequest, _=Depends(rate_limit_auth)):
+    """Request password reset: sends OTP to email."""
+    result = forgot_password(data.email)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
+
+@router.post("/reset-password")
+def reset_password_api(data: ResetPasswordRequest, _=Depends(rate_limit_auth)):
+    """Reset password with email + OTP from forgot-password email."""
+    result = reset_password(data.email, data.otp, data.new_password)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
+
+@router.post("/refresh", response_model=LoginResponse)
+def refresh_api(data: RefreshTokenRequest):
+    """Exchange refresh token for new access token (and new refresh token)."""
+    user = verify_refresh_token(data.refresh_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    access_token = create_access_token(
+        data={
+            "sub": user["userid"],
+            "email": user["email"],
+            "role": user["role"],
+            "username": user["username"],
+        }
+    )
+    new_refresh = create_refresh_token(user["userid"])
+    return LoginResponse(
+        success=True,
+        message="Token refreshed",
+        access_token=access_token,
+        refresh_token=new_refresh,
         user=UserResponse(
             userid=user["userid"],
             username=user["username"],

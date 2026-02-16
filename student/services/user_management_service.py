@@ -11,25 +11,33 @@ def get_all_users(
     name: Optional[str] = None,
     email: Optional[str] = None,
     active: Optional[bool] = None,
+    search: Optional[str] = None,
+    sort: str = "userid",
+    order: str = "asc",
     page: int = 1,
     limit: int = 20,
 ) -> dict:
-    """Admin: fetch users with filters and pagination."""
-    query = supabase.table("users").select("*")
-
+    """Admin: fetch users with filters, sort and pagination."""
+    query = supabase.table("users").select("*", count="exact")
     if role:
         query = query.eq("role", role)
     if name:
         query = query.or_(f"username.ilike.%{name}%")
     if email:
         query = query.ilike("email", f"%{email}%")
+    if search and search.strip():
+        q = search.strip()
+        query = query.or_(f"username.ilike.%{q}%,email.ilike.%{q}%,userid.ilike.%{q}%")
     if active is not None:
         query = query.eq("active", active)
-
+    sort_col = sort if sort in ("userid", "username", "email", "role", "active") else "userid"
+    desc = order.lower() == "desc"
     offset = (page - 1) * limit
-    result = query.range(offset, offset + limit - 1).execute()
-
-    return {"success": True, "users": result.data or [], "page": page, "limit": limit}
+    result = query.range(offset, offset + limit - 1).order(sort_col, desc=desc).execute()
+    total = getattr(result, "count", None)
+    if total is None and result.data is not None:
+        total = len(result.data)
+    return {"success": True, "users": result.data or [], "page": page, "limit": limit, "total": total}
 
 
 def get_user_by_id(userid: str) -> dict:

@@ -8,7 +8,7 @@ const error = ref('')
 const successMsg = ref('')
 const subTab = ref('list') // list | add | bulk-add | bulk-delete
 
-const filters = ref({ role: '', name: '', email: '', active: '', page: 1, limit: 20 })
+const filters = ref({ role: '', name: '', email: '', active: '', search: '', sort: 'userid', order: 'asc', page: 1, limit: 20 })
 const totalPages = ref(1)
 
 const addForm = ref({
@@ -38,6 +38,9 @@ const fetchUsers = async () => {
     if (filters.value.name) params.name = filters.value.name
     if (filters.value.email) params.email = filters.value.email
     if (filters.value.active !== '') params.active = filters.value.active === 'true'
+    if (filters.value.search) params.search = filters.value.search
+    params.sort = filters.value.sort
+    params.order = filters.value.order
     params.page = filters.value.page
     params.limit = filters.value.limit
 
@@ -179,16 +182,27 @@ const handleBulkDelete = async () => {
     <!-- List Users -->
     <div v-show="subTab === 'list'" class="content-block">
       <div class="filters">
+        <input v-model="filters.search" placeholder="Search username, email, ID" @keyup.enter="fetchUsers" class="search-inp" />
         <select v-model="filters.role" @change="fetchUsers">
           <option value="">All Roles</option>
           <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
         </select>
-        <input v-model="filters.name" placeholder="Search by name" @keyup.enter="fetchUsers" />
-        <input v-model="filters.email" placeholder="Search by email" @keyup.enter="fetchUsers" />
+        <input v-model="filters.name" placeholder="Name" @keyup.enter="fetchUsers" />
+        <input v-model="filters.email" placeholder="Email" @keyup.enter="fetchUsers" />
         <select v-model="filters.active" @change="fetchUsers">
           <option value="">All</option>
           <option value="true">Active</option>
           <option value="false">Inactive</option>
+        </select>
+        <select v-model="filters.sort" @change="fetchUsers">
+          <option value="userid">User ID</option>
+          <option value="username">Username</option>
+          <option value="email">Email</option>
+          <option value="role">Role</option>
+        </select>
+        <select v-model="filters.order" @change="fetchUsers">
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
         </select>
         <button class="btn btn-primary" @click="fetchUsers">Search</button>
       </div>

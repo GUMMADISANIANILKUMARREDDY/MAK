@@ -6,23 +6,31 @@ def get_all_students(
     name: Optional[str] = None,
     email: Optional[str] = None,
     userid: Optional[str] = None,
+    search: Optional[str] = None,
+    sort: str = "userid",
+    order: str = "asc",
     page: int = 1,
     limit: int = 20,
 ) -> dict:
-    """Admin: fetch students with filters and pagination."""
-    query = supabase.table("students").select("*")
-
+    """Admin: fetch students with filters, sort and pagination."""
+    query = supabase.table("students").select("*", count="exact")
     if name:
         query = query.or_(f"first_name.ilike.%{name}%,last_name.ilike.%{name}%")
     if email:
         query = query.ilike("email", f"%{email}%")
     if userid:
         query = query.ilike("userid", f"%{userid}%")
-
+    if search and search.strip():
+        q = search.strip()
+        query = query.or_(f"first_name.ilike.%{q}%,last_name.ilike.%{q}%,email.ilike.%{q}%,userid.ilike.%{q}%")
+    sort_col = sort if sort in ("userid", "first_name", "last_name", "email") else "userid"
+    desc = order.lower() == "desc"
     offset = (page - 1) * limit
-    result = query.range(offset, offset + limit - 1).execute()
-
-    return {"success": True, "students": result.data or [], "page": page, "limit": limit}
+    result = query.range(offset, offset + limit - 1).order(sort_col, desc=desc).execute()
+    total = getattr(result, "count", None)
+    if total is None and result.data is not None:
+        total = len(result.data)
+    return {"success": True, "students": result.data or [], "page": page, "limit": limit, "total": total}
 
 
 def get_student_by_id(userid: str) -> dict:

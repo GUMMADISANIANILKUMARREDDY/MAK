@@ -18,12 +18,20 @@ router = APIRouter(prefix="/admin/projects", tags=["Admin - Projects"])
 @router.get("/")
 def list_projects(
     status: Optional[str] = Query(None, description="Filter by status"),
+    search: Optional[str] = Query(None, description="Search title or description"),
+    date_from: Optional[str] = Query(None, description="Start date from (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="Start date to (YYYY-MM-DD)"),
+    sort: str = Query("created_at", description="Sort field"),
+    order: str = Query("desc", description="asc or desc"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     _=Depends(require_role(["admin"])),
 ):
-    """Admin: List all projects."""
-    return get_all_projects(status=status, page=page, limit=limit)
+    """Admin: List all projects with filters and sort."""
+    from datetime import date as date_type
+    d_from = date_type.fromisoformat(date_from) if date_from else None
+    d_to = date_type.fromisoformat(date_to) if date_to else None
+    return get_all_projects(status=status, search=search, date_from=d_from, date_to=d_to, sort=sort, order=order, page=page, limit=limit)
 
 
 @router.get("/{projectid}")

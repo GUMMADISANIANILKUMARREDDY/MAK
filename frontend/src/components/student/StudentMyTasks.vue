@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { studentApi } from '../../services/api'
+import { studentApi } from '@/services/api'
 
 const tasks = ref([])
 const loading = ref(false)
@@ -8,19 +8,24 @@ const error = ref('')
 const successMsg = ref('')
 
 const filterStatus = ref('')
+const filterSearch = ref('')
+const filterSort = ref('assigned_at')
+const filterOrder = ref('desc')
 const selectedTask = ref(null)
 const taskDetail = ref(null)
 const statusModal = ref(false)
 const submitModal = ref(false)
 const selectedAssignment = ref(null)
 const statusForm = ref({ status: '' })
-const submitForm = ref({ notes: '' })
+const submitForm = ref({ notes: '', file: null })
 
 const fetchTasks = async () => {
   loading.value = true
   error.value = ''
   try {
-    const params = filterStatus.value ? { status: filterStatus.value } : {}
+    const params = { sort: filterSort.value, order: filterOrder.value }
+    if (filterStatus.value) params.status = filterStatus.value
+    if (filterSearch.value) params.search = filterSearch.value
     const res = await studentApi.myTasks(params)
     tasks.value = res.tasks || []
   } catch (err) {
@@ -71,7 +76,7 @@ const handleUpdateStatus = async () => {
 
 const openSubmitModal = (a) => {
   selectedAssignment.value = a
-  submitForm.value = { notes: '' }
+  submitForm.value = { notes: '', file: null }
   submitModal.value = true
 }
 
@@ -81,7 +86,7 @@ const handleSubmit = async () => {
   error.value = ''
   successMsg.value = ''
   try {
-    await studentApi.submit(selectedAssignment.value.assignment_id, submitForm.value.notes)
+    await studentApi.submit(selectedAssignment.value.assignment_id, submitForm.value.notes, submitForm.value.file || undefined)
     successMsg.value = 'Task submitted for review'
     submitModal.value = false
     fetchTasks()
@@ -100,14 +105,25 @@ onMounted(() => fetchTasks())
     <div v-if="error" class="alert alert-error">{{ error }}</div>
     <div v-if="successMsg" class="alert alert-success">{{ successMsg }}</div>
     <div class="filters">
+      <input v-model="filterSearch" placeholder="Search task title" @keyup.enter="fetchTasks" />
       <select v-model="filterStatus" @change="fetchTasks">
         <option value="">All Status</option>
         <option value="assigned">Assigned</option>
         <option value="in_progress">In Progress</option>
         <option value="review">Review</option>
-        <option value="submitted">Submitted</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
       </select>
-      <button class="btn btn-primary" @click="fetchTasks">Refresh</button>
+      <select v-model="filterSort" @change="fetchTasks">
+        <option value="assigned_at">Assigned Date</option>
+        <option value="completed_at">Completed</option>
+        <option value="status">Status</option>
+      </select>
+      <select v-model="filterOrder" @change="fetchTasks">
+        <option value="desc">Desc</option>
+        <option value="asc">Asc</option>
+      </select>
+      <button class="btn btn-primary" @click="fetchTasks">Search</button>
     </div>
     <div v-if="loading" class="loading">Loading...</div>
     <div v-else class="content-block">
@@ -121,6 +137,14 @@ onMounted(() => fetchTasks())
             <div class="meta">
               <span class="badge" :class="t.status">{{ t.status || 'assigned' }}</span>
               <span v-if="t.tasks?.priority || t.priority" class="priority">{{ t.tasks?.priority || t.priority }}</span>
+            </div>
+            <div v-if="t.review_result || t.status === 'approved' || t.status === 'rejected'" class="review-block">
+              <strong>Review:</strong>
+              <span :class="{ approved: (t.review_result || t.status) === 'approved', rejected: (t.review_result || t.status) === 'rejected' }">
+                {{ t.review_result || t.status }}
+              </span>
+              <span v-if="t.review_score != null" class="score">Score: {{ t.review_score }}</span>
+              <p v-if="t.review_feedback" class="feedback">{{ t.review_feedback }}</p>
             </div>
           </div>
           <div class="task-actions">
@@ -157,6 +181,11 @@ onMounted(() => fetchTasks())
             <label>Notes (optional)</label>
             <textarea v-model="submitForm.notes" rows="3" placeholder="Add any notes for review"></textarea>
           </div>
+          <div class="form-group">
+            <label>Attachment (optional)</label>
+            <input type="file" @change="submitForm.file = $event.target.files?.[0] || null" accept=".pdf,.doc,.docx,.zip,.txt,image/*" />
+            <span v-if="submitForm.file" class="file-name">{{ submitForm.file.name }}</span>
+          </div>
           <div class="modal-actions">
             <button type="button" class="btn btn-secondary" @click="submitModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="loading">Submit for Review</button>
@@ -188,8 +217,14 @@ onMounted(() => fetchTasks())
 .task-card .badge.assigned { background: #e0f2fe; color: #0ea5e9; }
 .task-card .badge.in_progress { background: #fef3c7; color: #d97706; }
 .task-card .badge.review { background: #fce7f3; color: #db2777; }
-.task-card .badge.submitted { background: #ecfdf5; color: #059669; }
+.task-card .badge.approved { background: #ecfdf5; color: #059669; }
+.task-card .badge.rejected { background: #fef2f2; color: #dc2626; }
 .task-card .priority { font-size: 0.8rem; color: #64748b; }
+.task-card .review-block { margin-top: 0.75rem; padding: 0.75rem; background: #f8fafc; border-radius: 6px; font-size: 0.85rem; }
+.task-card .review-block .approved { color: #059669; font-weight: 600; }
+.task-card .review-block .rejected { color: #dc2626; font-weight: 600; }
+.task-card .review-block .score { margin-left: 0.5rem; color: #64748b; }
+.task-card .review-block .feedback { margin: 0.5rem 0 0 0; color: #475569; white-space: pre-wrap; }
 .task-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 .btn-sm { padding: 0.35rem 0.65rem; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
 .btn-status { background: #e0f2fe; color: #0ea5e9; }
@@ -197,6 +232,8 @@ onMounted(() => fetchTasks())
 .form-group { margin-bottom: 1rem; }
 .form-group label { display: block; font-weight: 600; margin-bottom: 0.35rem; }
 .form-group select, .form-group textarea { width: 100%; padding: 0.5rem; border: 2px solid #e2e8f0; border-radius: 8px; }
+.form-group input[type="file"] { width: 100%; font-size: 0.9rem; }
+.file-name { font-size: 0.85rem; color: #64748b; margin-top: 0.25rem; display: block; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal-content { background: white; border-radius: 12px; padding: 2rem; max-width: 420px; width: 100%; }
 .modal-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }

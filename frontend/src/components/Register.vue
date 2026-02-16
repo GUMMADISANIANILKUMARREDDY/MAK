@@ -74,6 +74,25 @@ const handleVerifyOTP = async () => {
     loading.value = false
   }
 }
+
+const resendOtpLoading = ref(false)
+const handleResendOtp = async () => {
+  error.value = ''
+  successMessage.value = ''
+  resendOtpLoading.value = true
+  try {
+    const response = await authService.resendOtp(verifyForm.value.email)
+    if (response.success) {
+      successMessage.value = response.message || 'New OTP sent. Check your email.'
+    } else {
+      error.value = response.message || 'Failed to resend OTP'
+    }
+  } catch (err) {
+    error.value = err.response?.data?.detail || 'Failed to resend OTP. Try again.'
+  } finally {
+    resendOtpLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -175,6 +194,9 @@ const handleVerifyOTP = async () => {
         <button type="submit" class="btn-submit" :disabled="loading">
           {{ loading ? 'Verifying...' : 'Verify OTP' }}
         </button>
+        <button type="button" class="btn-secondary" :disabled="resendOtpLoading" @click="handleResendOtp">
+          {{ resendOtpLoading ? 'Sending...' : 'Resend OTP' }}
+        </button>
       </form>
 
       <p class="switch-text">
@@ -275,6 +297,30 @@ h2 {
 }
 
 .btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-secondary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

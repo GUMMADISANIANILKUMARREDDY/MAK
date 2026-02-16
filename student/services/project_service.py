@@ -22,15 +22,35 @@ def create_project(title: str, description: Optional[str], created_by: str, star
     return {"success": True, "message": "Project created", "project": result.data[0]}
 
 
-def get_all_projects(status: Optional[str] = None, page: int = 1, limit: int = 20) -> dict:
-    """Admin: Get all projects."""
-    query = supabase.table("projects").select("*")
+def get_all_projects(
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    sort: str = "created_at",
+    order: str = "desc",
+    page: int = 1,
+    limit: int = 20,
+) -> dict:
+    """Admin: Get all projects with filters and sort."""
+    query = supabase.table("projects").select("*", count="exact")
     if status:
         query = query.eq("status", status)
-
+    if search and search.strip():
+        q = search.strip()
+        query = query.or_(f"title.ilike.%{q}%,description.ilike.%{q}%")
+    if date_from:
+        query = query.gte("start_date", date_from.isoformat())
+    if date_to:
+        query = query.lte("start_date", date_to.isoformat())
+    sort_col = sort if sort in ("created_at", "updated_at", "start_date", "end_date", "title") else "created_at"
+    desc = order.lower() == "desc"
     offset = (page - 1) * limit
-    result = query.range(offset, offset + limit - 1).order("created_at", desc=True).execute()
-    return {"success": True, "projects": result.data or [], "page": page, "limit": limit}
+    result = query.range(offset, offset + limit - 1).order(sort_col, desc=desc).execute()
+    total = getattr(result, "count", None)
+    if total is None and result.data is not None:
+        total = len(result.data)
+    return {"success": True, "projects": result.data or [], "page": page, "limit": limit, "total": total}
 
 
 def get_project_by_id(projectid: str) -> dict:

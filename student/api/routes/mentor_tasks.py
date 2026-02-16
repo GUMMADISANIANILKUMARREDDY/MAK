@@ -5,6 +5,7 @@ from schemas.project import (
     TaskUpdateRequest,
     TaskAssignStudentRequest,
     TaskBulkAssignRequest,
+    TaskReviewRequest,
     TeamCreateRequest,
     TeamAddStudentRequest,
 )
@@ -17,6 +18,7 @@ from services.task_service import (
     assign_task_to_student,
     assign_task_bulk,
     get_task_assignments,
+    review_task,
 )
 from services.team_service import (
     create_team,
@@ -89,13 +91,22 @@ def delete_team_endpoint(teamid: str, _=Depends(require_role(["mentor"]))):
 @router.get("/modules/{moduleid}/tasks")
 def list_tasks(
     moduleid: str,
-    status: Optional[str] = Query(None),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    search: Optional[str] = Query(None, description="Search title or description"),
+    priority: Optional[str] = Query(None, description="Filter by priority"),
+    date_from: Optional[str] = Query(None, description="Due date from (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="Due date to (YYYY-MM-DD)"),
+    sort: str = Query("created_at", description="Sort field"),
+    order: str = Query("desc", description="asc or desc"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
     _=Depends(require_role(["mentor"])),
 ):
-    """Mentor: List tasks in module."""
-    return get_module_tasks(moduleid, status, page, limit)
+    """Mentor: List tasks in module with filters and sort."""
+    from datetime import date as date_type
+    d_from = date_type.fromisoformat(date_from) if date_from else None
+    d_to = date_type.fromisoformat(date_to) if date_to else None
+    return get_module_tasks(moduleid, status=status, search=search, priority=priority, date_from=d_from, date_to=d_to, sort=sort, order=order, page=page, limit=limit)
 
 
 @router.get("/tasks/{taskid}")
@@ -160,3 +171,22 @@ def bulk_assign_students(taskid: str, data: TaskBulkAssignRequest, current_user:
 def list_task_assignments(taskid: str, _=Depends(require_role(["mentor"]))):
     """Mentor: Get all assignments for task."""
     return get_task_assignments(taskid)
+
+
+@router.post("/tasks/assignments/{assignment_id}/review")
+def review_assignment(
+    assignment_id: str,
+    data: TaskReviewRequest,
+    current_user: dict = Depends(require_role(["mentor"])),
+):
+    """Mentor: Approve or reject task submission with feedback and optional score."""
+    result = review_task(
+        assignment_id,
+        current_user["sub"],
+        data.result,
+        data.feedback,
+        data.score,
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result

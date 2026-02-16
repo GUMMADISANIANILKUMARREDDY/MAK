@@ -26,12 +26,15 @@ def list_users(
     name: Optional[str] = Query(None, description="Search by username"),
     email: Optional[str] = Query(None, description="Search by email"),
     active: Optional[bool] = Query(None, description="Filter by active status"),
+    search: Optional[str] = Query(None, description="Search username, email, userid"),
+    sort: str = Query("userid", description="Sort field"),
+    order: str = Query("asc", description="asc or desc"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     _=Depends(require_role(["admin"])),
 ):
-    """Admin: List all users with filters and pagination."""
-    return get_all_users(role=role, name=name, email=email, active=active, page=page, limit=limit)
+    """Admin: List all users with filters, sort and pagination."""
+    return get_all_users(role=role, name=name, email=email, active=active, search=search, sort=sort, order=order, page=page, limit=limit)
 
 
 @router.get("/role/{role}")

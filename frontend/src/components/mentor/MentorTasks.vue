@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { mentorApi } from '../../services/api'
+import { mentorApi } from '@/services/api'
 
 const modules = ref([])
 const selectedModule = ref(null)
@@ -19,6 +19,10 @@ const editForm = ref({ title: '', description: '', task_type: '', priority: '', 
 const assignForm = ref({ student_userid: '' })
 const bulkAssignForm = ref({ student_userids: '' })
 const assignments = ref([])
+const taskFilters = ref({ search: '', status: '', priority: '', date_from: '', date_to: '', sort: 'created_at', order: 'desc' })
+const reviewModal = ref(false)
+const reviewAssignment = ref(null)
+const reviewForm = ref({ result: 'approved', feedback: '', score: '' })
 
 const fetchModules = async () => {
   loading.value = true
@@ -41,7 +45,15 @@ const loadTasks = async (mod) => {
   selectedModule.value = mod
   error.value = ''
   try {
-    const res = await mentorApi.getModuleTasks(mod.moduleid)
+    const params = {}
+    if (taskFilters.value.search) params.search = taskFilters.value.search
+    if (taskFilters.value.status) params.status = taskFilters.value.status
+    if (taskFilters.value.priority) params.priority = taskFilters.value.priority
+    if (taskFilters.value.date_from) params.date_from = taskFilters.value.date_from
+    if (taskFilters.value.date_to) params.date_to = taskFilters.value.date_to
+    params.sort = taskFilters.value.sort
+    params.order = taskFilters.value.order
+    const res = await mentorApi.getModuleTasks(mod.moduleid, params)
     tasks.value = res.tasks || []
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to load tasks'
@@ -173,6 +185,34 @@ const handleDelete = async (taskid) => {
     loading.value = false
   }
 }
+
+const openReview = (a) => {
+  reviewAssignment.value = a
+  reviewForm.value = { result: 'approved', feedback: '', score: '' }
+  reviewModal.value = true
+}
+
+const handleReview = async () => {
+  if (!reviewAssignment.value) return
+  loading.value = true
+  error.value = ''
+  successMsg.value = ''
+  try {
+    const data = {
+      result: reviewForm.value.result,
+      feedback: reviewForm.value.feedback || undefined,
+      score: reviewForm.value.score ? parseInt(reviewForm.value.score, 10) : undefined,
+    }
+    await mentorApi.reviewAssignment(reviewAssignment.value.assignment_id, data)
+    successMsg.value = `Task ${reviewForm.value.result}`
+    reviewModal.value = false
+    loadAssignments(assignTask.value)
+  } catch (err) {
+    error.value = err.response?.data?.detail || 'Failed to submit review'
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
@@ -192,6 +232,35 @@ const handleDelete = async (taskid) => {
         <button :class="{ active: subTab === 'add' }" @click="subTab = 'add'">Create Task</button>
       </div>
       <div v-show="subTab === 'list'" class="content-block">
+        <div class="filters filters-tasks">
+          <input v-model="taskFilters.search" placeholder="Search title or description" @keyup.enter="loadTasks(selectedModule)" />
+          <select v-model="taskFilters.status" @change="loadTasks(selectedModule)">
+            <option value="">All Status</option>
+            <option value="backlog">Backlog</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="review">Review</option>
+            <option value="done">Done</option>
+          </select>
+          <select v-model="taskFilters.priority" @change="loadTasks(selectedModule)">
+            <option value="">All Priority</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+          <input v-model="taskFilters.date_from" type="date" placeholder="Due from" @change="loadTasks(selectedModule)" />
+          <input v-model="taskFilters.date_to" type="date" placeholder="Due to" @change="loadTasks(selectedModule)" />
+          <select v-model="taskFilters.sort" @change="loadTasks(selectedModule)">
+            <option value="created_at">Created</option>
+            <option value="due_date">Due Date</option>
+            <option value="title">Title</option>
+          </select>
+          <select v-model="taskFilters.order" @change="loadTasks(selectedModule)">
+            <option value="desc">Desc</option>
+            <option value="asc">Asc</option>
+          </select>
+          <button class="btn btn-primary" @click="loadTasks(selectedModule)">Search</button>
+        </div>
         <div class="table-wrapper">
         <table class="data-table">
           <thead>
@@ -320,12 +389,42 @@ const handleDelete = async (taskid) => {
           <div v-if="assignments.length" class="assign-section">
             <h4>Assigned</h4>
             <ul class="assigned-list">
-              <li v-for="a in assignments" :key="a.assignment_id">{{ a.student_userid }} ({{ a.status }})</li>
+              <li v-for="a in assignments" :key="a.assignment_id" class="assigned-row">
+                <span>{{ a.student_userid }} ({{ a.status }})</span>
+                <button v-if="a.status === 'review'" type="button" class="btn-sm btn-review" @click="openReview(a)">Review</button>
+              </li>
             </ul>
           </div>
           <div class="modal-actions">
             <button type="button" class="btn btn-secondary" @click="assignModal = false">Close</button>
           </div>
+        </div>
+      </div>
+      <div v-if="reviewModal" class="modal-overlay" @click="reviewModal = false">
+        <div class="modal-content" @click.stop>
+          <h3>Review Submission</h3>
+          <p class="muted">Student: {{ reviewAssignment?.student_userid }}</p>
+          <form @submit.prevent="handleReview">
+            <div class="form-group">
+              <label>Result</label>
+              <select v-model="reviewForm.result" required>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Feedback (optional)</label>
+              <textarea v-model="reviewForm.feedback" rows="3" placeholder="Comments for the student"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Score (optional)</label>
+              <input v-model.number="reviewForm.score" type="number" min="0" max="100" placeholder="0-100" />
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" @click="reviewModal = false">Cancel</button>
+              <button type="submit" class="btn btn-primary" :disabled="loading">Submit Review</button>
+            </div>
+          </form>
         </div>
       </div>
     </template>
@@ -365,7 +464,11 @@ const handleDelete = async (taskid) => {
 .assign-section h4 { margin: 0 0 0.5rem 0; font-size: 0.9rem; }
 .inline-form { display: flex; gap: 0.5rem; align-items: center; }
 .inline-form input { flex: 1; padding: 0.5rem; border: 2px solid #e2e8f0; border-radius: 8px; }
-.assigned-list { margin: 0; padding-left: 1.5rem; }
+.filters-tasks { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+.filters-tasks input, .filters-tasks select { padding: 0.4rem 0.5rem; border: 2px solid #e2e8f0; border-radius: 8px; }
+.assigned-list { margin: 0; padding-left: 0; list-style: none; }
+.assigned-row { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid #f1f5f9; }
+.btn-review { background: #fef3c7; color: #b45309; }
 .modal-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
 .muted { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
 .loading, .empty { padding: 2rem; text-align: center; color: #64748b; }

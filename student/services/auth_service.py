@@ -1,4 +1,6 @@
+import hashlib
 import random
+import secrets
 import string
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -8,7 +10,7 @@ from jose import JWTError, jwt
 from config.settings import settings
 from config.supabase_client import supabase
 from schemas.user import UserResponse
-from services.email_service import send_otp_email
+from services.email_service import send_otp_email, send_password_reset_email
 
 
 def hash_password(password: str) -> str:
@@ -28,6 +30,51 @@ def create_access_token(data: dict) -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def create_refresh_token(userid: str) -> str:
+    """Generate a refresh token and store its hash in DB. Returns plain token."""
+    raw = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw.encode()).hexdigest()
+    expires_at = (datetime.utcnow() + timedelta(days=settings.REFRESH_EXPIRE_DAYS)).isoformat()
+    try:
+        supabase.table("refresh_tokens").insert({
+            "userid": userid,
+            "token_hash": token_hash,
+            "expires_at": expires_at,
+        }).execute()
+    except Exception:
+        return None
+    return raw
+
+
+def verify_refresh_token(token: str) -> Optional[dict]:
+    """Verify refresh token and return user payload if valid. Deletes token on use (one-time)."""
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    r = supabase.table("refresh_tokens").select("userid, expires_at").eq("token_hash", token_hash).execute()
+    if not r.data or len(r.data) == 0:
+        return None
+    row = r.data[0]
+    exp = row["expires_at"]
+    if isinstance(exp, str):
+        exp = datetime.fromisoformat(exp.replace("Z", "+00:00"))
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > exp:
+        supabase.table("refresh_tokens").delete().eq("token_hash", token_hash).execute()
+        return None
+    supabase.table("refresh_tokens").delete().eq("token_hash", token_hash).execute()
+    user_r = supabase.table("users").select("userid, username, email, role, active").eq("userid", row["userid"]).execute()
+    if not user_r.data or not user_r.data[0].get("active", True):
+        return None
+    user = user_r.data[0]
+    return {
+        "userid": str(user["userid"]),
+        "username": user["username"],
+        "email": user["email"],
+        "role": user.get("role", "student"),
+        "active": user.get("active", True),
+    }
 
 
 def login_user(userid: Optional[str], email: Optional[str], password: str) -> Optional[dict]:
@@ -238,3 +285,72 @@ def admin_add_user(
             "active": user.get("active", True),
         },
     }
+
+
+def resend_otp(email: str) -> dict:
+    """Resend OTP for pending registration. Returns success/message."""
+    r = supabase.table("pending_registrations").select("*").eq("email", email).execute()
+    if not r.data or len(r.data) == 0:
+        return {"success": False, "message": "No pending registration for this email. Please register again."}
+    pending = r.data[0]
+    otp = generate_otp()
+    expires_at = (datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)).isoformat()
+    supabase.table("pending_registrations").update({"otp": otp, "expires_at": expires_at}).eq("email", email).execute()
+    if not send_otp_email(email, otp):
+        return {"success": False, "message": "Failed to send OTP. Try again."}
+    return {"success": True, "message": f"New OTP sent to {email}. Valid for {settings.OTP_EXPIRE_MINUTES} minutes."}
+
+
+def change_password(userid: str, current_password: str, new_password: str) -> dict:
+    """Change password for logged-in user. Verifies current password first."""
+    r = supabase.table("users").select("password").eq("userid", userid).execute()
+    if not r.data or len(r.data) == 0:
+        return {"success": False, "message": "User not found"}
+    if not verify_password(current_password, r.data[0]["password"]):
+        return {"success": False, "message": "Current password is incorrect"}
+    hashed = hash_password(new_password)
+    supabase.table("users").update({"password": hashed}).eq("userid", userid).execute()
+    return {"success": True, "message": "Password updated successfully"}
+
+
+def forgot_password(email: str) -> dict:
+    """Create password reset OTP and send email. Uses table password_reset_otps."""
+    r = supabase.table("users").select("userid").eq("email", email).execute()
+    if not r.data or len(r.data) == 0:
+        return {"success": False, "message": "No account found with this email."}
+    otp = generate_otp()
+    expires_at = (datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)).isoformat()
+    try:
+        supabase.table("password_reset_otps").delete().eq("email", email).execute()
+        supabase.table("password_reset_otps").insert({
+            "email": email,
+            "otp": otp,
+            "expires_at": expires_at,
+        }).execute()
+    except Exception:
+        return {"success": False, "message": "Failed to create reset request. Try again."}
+    if not send_password_reset_email(email, otp):
+        return {"success": False, "message": "Failed to send email. Try again."}
+    return {"success": True, "message": f"Reset code sent to {email}. Valid for {settings.OTP_EXPIRE_MINUTES} minutes."}
+
+
+def reset_password(email: str, otp: str, new_password: str) -> dict:
+    """Verify reset OTP and set new password."""
+    r = supabase.table("password_reset_otps").select("*").eq("email", email).execute()
+    if not r.data or len(r.data) == 0:
+        return {"success": False, "message": "Invalid or expired reset code. Request a new one."}
+    row = r.data[0]
+    if row["otp"] != otp:
+        return {"success": False, "message": "Invalid OTP"}
+    exp = row["expires_at"]
+    if isinstance(exp, str):
+        exp = datetime.fromisoformat(exp.replace("Z", "+00:00"))
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > exp:
+        supabase.table("password_reset_otps").delete().eq("email", email).execute()
+        return {"success": False, "message": "Reset code expired. Request a new one."}
+    hashed = hash_password(new_password)
+    supabase.table("users").update({"password": hashed}).eq("email", email).execute()
+    supabase.table("password_reset_otps").delete().eq("email", email).execute()
+    return {"success": True, "message": "Password reset successfully. You can log in with your new password."}

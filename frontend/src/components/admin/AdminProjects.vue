@@ -8,7 +8,7 @@ const error = ref('')
 const successMsg = ref('')
 const subTab = ref('list')
 
-const filters = ref({ status: '', page: 1, limit: 20 })
+const filters = ref({ status: '', search: '', date_from: '', date_to: '', sort: 'created_at', order: 'desc', page: 1, limit: 20 })
 
 const addForm = ref({ title: '', description: '', start_date: '', end_date: '' })
 
@@ -25,6 +25,11 @@ const fetchProjects = async () => {
   try {
     const params = { page: filters.value.page, limit: filters.value.limit }
     if (filters.value.status) params.status = filters.value.status
+    if (filters.value.search) params.search = filters.value.search
+    if (filters.value.date_from) params.date_from = filters.value.date_from
+    if (filters.value.date_to) params.date_to = filters.value.date_to
+    params.sort = filters.value.sort
+    params.order = filters.value.order
     const res = await projectsApi.list(params)
     projects.value = res.projects || []
   } catch (err) {
@@ -142,12 +147,24 @@ const handleDelete = async (projectid) => {
 
     <div v-show="subTab === 'list'" class="content-block">
       <div class="filters">
+        <input v-model="filters.search" placeholder="Search title or description" @keyup.enter="fetchProjects" class="search-inp" />
         <select v-model="filters.status" @change="fetchProjects">
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="completed">Completed</option>
         </select>
-        <button class="btn btn-primary" @click="fetchProjects">Refresh</button>
+        <input v-model="filters.date_from" type="date" placeholder="From" @change="fetchProjects" />
+        <input v-model="filters.date_to" type="date" placeholder="To" @change="fetchProjects" />
+        <select v-model="filters.sort" @change="fetchProjects">
+          <option value="created_at">Created</option>
+          <option value="start_date">Start Date</option>
+          <option value="title">Title</option>
+        </select>
+        <select v-model="filters.order" @change="fetchProjects">
+          <option value="desc">Desc</option>
+          <option value="asc">Asc</option>
+        </select>
+        <button class="btn btn-primary" @click="fetchProjects">Search</button>
       </div>
       <div v-if="loading" class="loading">Loading...</div>
       <div v-else class="table-wrapper">

@@ -25,12 +25,16 @@ def my_projects(current_user: dict = Depends(require_role(["manager"]))):
 @router.get("/projects/{projectid}/modules")
 def list_modules(
     projectid: str,
+    search: Optional[str] = Query(None, description="Search title or description"),
+    status: Optional[str] = Query(None, description="Filter by status"),
+    sort: str = Query("created_at", description="Sort field"),
+    order: str = Query("desc", description="asc or desc"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
     _=Depends(require_role(["admin", "manager", "mentor"])),
 ):
-    """Manager/Mentor: List modules in project."""
-    return get_project_modules(projectid, page, limit)
+    """Manager/Mentor: List modules in project with filters and sort."""
+    return get_project_modules(projectid, search=search, status=status, sort=sort, order=order, page=page, limit=limit)
 
 
 @router.get("/modules/{moduleid}")

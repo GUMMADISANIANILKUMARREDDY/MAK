@@ -31,6 +31,13 @@ def add_student_to_team(teamid: str, student_userid: str) -> dict:
 
     if not result.data:
         return {"success": False, "message": "Failed to add student"}
+    try:
+        team_row = supabase.table("teams").select("team_name").eq("teamid", teamid).limit(1).execute()
+        team_name = team_row.data[0]["team_name"] if team_row.data else "Team"
+        from services.notification_service import notify_student_added_to_team
+        notify_student_added_to_team(student_userid, team_name, link="")
+    except Exception:
+        pass
     return {"success": True, "message": "Student added to team", "member": result.data[0]}
 
 

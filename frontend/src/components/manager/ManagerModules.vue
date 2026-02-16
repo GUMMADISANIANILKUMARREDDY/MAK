@@ -17,6 +17,7 @@ const editModule = ref(null)
 const assignModule = ref(null)
 const editForm = ref({ title: '', description: '', priority: '', status: '', due_date: '' })
 const assignForm = ref({ mentor_userid: '' })
+const moduleFilters = ref({ search: '', status: '', sort: 'created_at', order: 'desc' })
 
 const fetchProjects = async () => {
   loading.value = true
@@ -39,7 +40,12 @@ const loadModules = async (project) => {
   selectedProject.value = project
   error.value = ''
   try {
-    const res = await managerApi.getProjectModules(project.projectid)
+    const params = {}
+    if (moduleFilters.value.search) params.search = moduleFilters.value.search
+    if (moduleFilters.value.status) params.status = moduleFilters.value.status
+    params.sort = moduleFilters.value.sort
+    params.order = moduleFilters.value.order
+    const res = await managerApi.getProjectModules(project.projectid, params)
     modules.value = res.modules || []
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to load modules'
@@ -168,6 +174,25 @@ const handleDelete = async (moduleid) => {
         <button :class="{ active: subTab === 'add' }" @click="subTab = 'add'">Create Module</button>
       </div>
       <div v-show="subTab === 'list'" class="content-block">
+        <div class="filters">
+          <input v-model="moduleFilters.search" placeholder="Search title or description" @keyup.enter="loadModules(selectedProject)" />
+          <select v-model="moduleFilters.status" @change="loadModules(selectedProject)">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+          <select v-model="moduleFilters.sort" @change="loadModules(selectedProject)">
+            <option value="created_at">Created</option>
+            <option value="due_date">Due Date</option>
+            <option value="title">Title</option>
+          </select>
+          <select v-model="moduleFilters.order" @change="loadModules(selectedProject)">
+            <option value="desc">Desc</option>
+            <option value="asc">Asc</option>
+          </select>
+          <button class="btn btn-primary" @click="loadModules(selectedProject)">Search</button>
+        </div>
         <div class="table-wrapper">
         <table class="data-table">
           <thead>
@@ -288,6 +313,8 @@ const handleDelete = async (moduleid) => {
 .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 .tabs button { padding: 0.5rem 1rem; border: 2px solid #e2e8f0; background: white; border-radius: 8px; font-weight: 600; cursor: pointer; }
 .tabs button.active { background: #0ea5e9; border-color: #0ea5e9; color: white; }
+.filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+.filters input, .filters select { padding: 0.4rem 0.5rem; border: 2px solid #e2e8f0; border-radius: 8px; }
 .content-block { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th, .data-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
