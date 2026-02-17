@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8001'
+const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'https://mak-a3dk.onrender.com/'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -188,6 +188,14 @@ export const mentorApi = {
   reviewAssignment(assignmentId, data) {
     return api.post(`/mentor/tasks/assignments/${assignmentId}/review`, data).then(res => res.data)
   },
+  getSubmissionUrl(assignmentId) {
+    return api.get(`/mentor/tasks/assignments/${assignmentId}/submission`).then(res => res.data)
+  },
+  uploadReviewFile(assignmentId, file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post(`/mentor/tasks/assignments/${assignmentId}/review-file`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }).then(res => res.data)
+  },
 }
 
 export const studentApi = {
@@ -223,6 +231,9 @@ export const notificationsApi = {
   markAllRead() {
     return api.put('/notifications/read-all').then(res => res.data)
   },
+  delete(notificationId) {
+    return api.delete(`/notifications/${notificationId}`).then(res => res.data)
+  },
 }
 
 export const dashboardApi = {
@@ -237,6 +248,96 @@ export const dashboardApi = {
   },
   getStudentStats() {
     return api.get('/dashboard/student-stats').then(res => res.data)
+  },
+}
+
+export const activityLogsApi = {
+  list(params) {
+    return api.get('/admin/activity-logs', { params }).then(res => res.data)
+  },
+}
+
+export const exportApi = {
+  students() {
+    return api.get('/admin/export/students', { responseType: 'blob' })
+  },
+  projects() {
+    return api.get('/admin/export/projects', { responseType: 'blob' })
+  },
+  mentorTasks() {
+    return api.get('/mentor/export/tasks', { responseType: 'blob' })
+  },
+}
+
+export const commentsApi = {
+  list(assignmentId) {
+    return api.get(`/mentor/tasks/assignments/${assignmentId}/comments`).then(res => res.data)
+  },
+  add(assignmentId, comment) {
+    return api.post(`/mentor/tasks/assignments/${assignmentId}/comments`, { comment }).then(res => res.data)
+  },
+  delete(commentId) {
+    return api.delete(`/mentor/tasks/comments/${commentId}`).then(res => res.data)
+  },
+}
+
+export const studentCommentsApi = {
+  list(assignmentId) {
+    return api.get(`/student/tasks/assignments/${assignmentId}/comments`).then(res => res.data)
+  },
+  add(assignmentId, comment) {
+    return api.post(`/student/tasks/assignments/${assignmentId}/comments`, { comment }).then(res => res.data)
+  },
+  delete(commentId) {
+    return api.delete(`/student/tasks/comments/${commentId}`).then(res => res.data)
+  },
+}
+
+export const chatApi = {
+  getConversations() {
+    return api.get('/chat/conversations').then(res => res.data)
+  },
+  getOrCreateWith(otherUserid) {
+    return api.get(`/chat/conversations/with/${otherUserid}`).then(res => res.data)
+  },
+  getMessages(conversationId) {
+    return api.get(`/chat/conversations/${conversationId}/messages`).then(res => res.data)
+  },
+  sendMessage(conversationId, body) {
+    return api.post(`/chat/conversations/${conversationId}/messages`, { body }).then(res => res.data)
+  },
+}
+
+export const collegesApi = {
+  list() {
+    return api.get('/admin/colleges').then(res => res.data)
+  },
+  create(data) {
+    return api.post('/admin/colleges', data).then(res => res.data)
+  },
+}
+
+export const permissionsApi = {
+  list() {
+    return api.get('/admin/permissions').then(res => res.data)
+  },
+  listForRole(role) {
+    return api.get(`/admin/permissions/role/${role}`).then(res => res.data)
+  },
+  set(data) {
+    return api.post('/admin/permissions', data).then(res => res.data)
+  },
+}
+
+export const reportsApi = {
+  projectSummaryExcel() {
+    return api.get('/admin/reports/project-summary.xlsx', { responseType: 'blob' })
+  },
+  projectSummaryPdf() {
+    return api.get('/admin/reports/project-summary.pdf', { responseType: 'blob' })
+  },
+  studentProgressExcel() {
+    return api.get('/admin/reports/student-progress.xlsx', { responseType: 'blob' })
   },
 }
 

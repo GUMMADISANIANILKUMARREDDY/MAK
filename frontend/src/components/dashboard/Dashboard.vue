@@ -5,6 +5,11 @@ import { dashboardApi, authService } from '@/services/api'
 import AdminUsers from '../admin/AdminUsers.vue'
 import AdminStudents from '../admin/AdminStudents.vue'
 import AdminProjects from '../admin/AdminProjects.vue'
+import AdminActivityLogs from '../admin/AdminActivityLogs.vue'
+import AdminColleges from '../admin/AdminColleges.vue'
+import AdminPermissions from '../admin/AdminPermissions.vue'
+import AdminReports from '../admin/AdminReports.vue'
+import ChatView from '../chat/ChatView.vue'
 import ManagerMyProjects from '../manager/ManagerMyProjects.vue'
 import ManagerModules from '../manager/ManagerModules.vue'
 import MentorMyModules from '../mentor/MentorMyModules.vue'
@@ -91,11 +96,16 @@ const menuItems = computed(() => {
     { id: 'projects', label: 'Projects', icon: '◇', roles: ['admin'] },
     { id: 'users', label: 'Users', icon: '◆', roles: ['admin', 'clgadmin'] },
     { id: 'students', label: 'Students', icon: '●', roles: ['admin', 'clgadmin'] },
+    { id: 'activity-logs', label: 'Activity Logs', icon: '▸', roles: ['admin'] },
+    { id: 'colleges', label: 'Colleges', icon: '◇', roles: ['admin'] },
+    { id: 'permissions', label: 'Permissions', icon: '◆', roles: ['admin'] },
+    { id: 'reports', label: 'Reports', icon: '▸', roles: ['admin'] },
     { id: 'my-projects', label: 'My Projects', icon: '◇', roles: ['manager'] },
     { id: 'modules', label: 'Modules', icon: '■', roles: ['manager'] },
     { id: 'my-modules', label: 'My Modules', icon: '■', roles: ['mentor'] },
     { id: 'teams', label: 'Teams', icon: '◆', roles: ['mentor'] },
     { id: 'tasks', label: 'Tasks', icon: '●', roles: ['mentor'] },
+    { id: 'chat', label: 'Chat', icon: '◆', roles: ['mentor', 'student'] },
     { id: 'my-tasks', label: 'My Tasks', icon: '●', roles: ['student'] },
   ]
   return allItems.filter(item => item.roles.includes(role.value))
@@ -257,6 +267,14 @@ const closeSidebar = () => {
 
           <AdminStudents v-else-if="activeSection === 'students'" />
 
+          <AdminActivityLogs v-else-if="activeSection === 'activity-logs'" />
+
+          <AdminColleges v-else-if="activeSection === 'colleges'" />
+
+          <AdminPermissions v-else-if="activeSection === 'permissions'" />
+
+          <AdminReports v-else-if="activeSection === 'reports'" />
+
           <ManagerMyProjects v-else-if="activeSection === 'my-projects'" />
 
           <ManagerModules v-else-if="activeSection === 'modules'" />
@@ -268,6 +286,8 @@ const closeSidebar = () => {
           <MentorTasks v-else-if="activeSection === 'tasks'" />
 
           <StudentMyTasks v-else-if="activeSection === 'my-tasks'" />
+
+          <ChatView v-else-if="activeSection === 'chat'" />
 
           <div v-else class="content-block">
             <h2>{{ activeSection }}</h2>
