@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { mentorApi } from '@/services/api'
+import { mentorApi, exportApi } from '@/services/api'
 
 const modules = ref([])
 const selectedModule = ref(null)
@@ -58,6 +58,18 @@ const loadTasks = async (mod) => {
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to load tasks'
   }
+}
+
+async function exportCsv() {
+  try {
+    const res = await exportApi.mentorTasks()
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'mentor-tasks.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (_) {}
 }
 
 onMounted(() => fetchModules())
@@ -233,6 +245,7 @@ const handleReview = async () => {
       </div>
       <div v-show="subTab === 'list'" class="content-block">
         <div class="filters filters-tasks">
+          <button type="button" class="btn btn-secondary" @click="exportCsv">Export CSV</button>
           <input v-model="taskFilters.search" placeholder="Search title or description" @keyup.enter="loadTasks(selectedModule)" />
           <select v-model="taskFilters.status" @change="loadTasks(selectedModule)">
             <option value="">All Status</option>

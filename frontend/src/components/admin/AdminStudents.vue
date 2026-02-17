@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { studentsApi } from '../../services/api'
+import { studentsApi, exportApi } from '../../services/api'
 
 const students = ref([])
 const loading = ref(false)
@@ -38,6 +38,18 @@ const fetchStudents = async () => {
   } finally {
     loading.value = false
   }
+}
+
+async function exportCsv() {
+  try {
+    const res = await exportApi.students()
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'students.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (_) {}
 }
 
 onMounted(() => fetchStudents())
@@ -159,6 +171,7 @@ const handleBulkDelete = async () => {
 
     <div v-show="subTab === 'list'" class="content-block">
       <div class="filters">
+        <button type="button" class="btn btn-secondary" @click="exportCsv">Export CSV</button>
         <input v-model="filters.search" placeholder="Search name, email, ID" @keyup.enter="fetchStudents" class="search-inp" />
         <input v-model="filters.userid" placeholder="User ID" @keyup.enter="fetchStudents" />
         <input v-model="filters.name" placeholder="Name" @keyup.enter="fetchStudents" />

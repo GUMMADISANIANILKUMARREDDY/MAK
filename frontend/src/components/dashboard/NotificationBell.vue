@@ -53,6 +53,17 @@ async function markAllRead() {
   } catch (_) {}
 }
 
+async function deleteNotification(id, e) {
+  e?.stopPropagation()
+  try {
+    const n = notifications.value.find(x => x.id === id)
+    const wasUnread = n && !n.read
+    await notificationsApi.delete(id)
+    notifications.value = notifications.value.filter(x => x.id !== id)
+    if (wasUnread) unreadCount.value = Math.max(0, unreadCount.value - 1)
+  } catch (_) {}
+}
+
 onMounted(() => {
   fetchCount()
 })
@@ -91,9 +102,19 @@ onMounted(() => {
           :class="{ unread: !n.read }"
           @click="!n.read && markOneRead(n.id)"
         >
-          <strong>{{ n.title }}</strong>
-          <p v-if="n.message" class="msg">{{ n.message }}</p>
-          <span class="time">{{ n.created_at ? new Date(n.created_at).toLocaleString() : '' }}</span>
+          <div class="item-content">
+            <strong>{{ n.title }}</strong>
+            <p v-if="n.message" class="msg">{{ n.message }}</p>
+            <span class="time">{{ n.created_at ? new Date(n.created_at).toLocaleString() : '' }}</span>
+          </div>
+          <button
+            type="button"
+            class="dismiss-btn"
+            aria-label="Dismiss"
+            @click="deleteNotification(n.id, $event)"
+          >
+            ×
+          </button>
         </li>
       </ul>
     </div>
@@ -178,9 +199,33 @@ onMounted(() => {
   max-height: 320px;
 }
 .dropdown-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   padding: 12px 14px;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border, #e5e7eb) 50%, transparent);
   cursor: default;
+}
+.dropdown-item .item-content {
+  flex: 1;
+  min-width: 0;
+}
+.dismiss-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.dismiss-btn:hover {
+  color: #ef4444;
+  background: color-mix(in srgb, #ef4444 15%, transparent);
 }
 .dropdown-item.unread {
   background: color-mix(in srgb, var(--color-primary, #2563eb) 8%, transparent);

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { projectsApi } from '../../services/api'
+import { projectsApi, exportApi } from '../../services/api'
 
 const projects = ref([])
 const loading = ref(false)
@@ -37,6 +37,18 @@ const fetchProjects = async () => {
   } finally {
     loading.value = false
   }
+}
+
+async function exportCsv() {
+  try {
+    const res = await exportApi.projects()
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'projects.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (_) {}
 }
 
 onMounted(() => fetchProjects())
@@ -147,6 +159,7 @@ const handleDelete = async (projectid) => {
 
     <div v-show="subTab === 'list'" class="content-block">
       <div class="filters">
+        <button type="button" class="btn btn-secondary" @click="exportCsv">Export CSV</button>
         <input v-model="filters.search" placeholder="Search title or description" @keyup.enter="fetchProjects" class="search-inp" />
         <select v-model="filters.status" @change="fetchProjects">
           <option value="">All Status</option>
