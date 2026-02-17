@@ -3,15 +3,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Load base .env first, then override with environment-specific file
-# Set ENVIRONMENT=development or ENVIRONMENT=production (default: development)
 _base_dir = Path(__file__).resolve().parent.parent
 load_dotenv(_base_dir / ".env")
-_env = os.getenv("ENVIRONMENT", "development").lower()
-if _env == "production":
-    load_dotenv(_base_dir / ".env.production")
-else:
-    load_dotenv(_base_dir / ".env.development")
 
 
 def _parse_cors_origins() -> list:
