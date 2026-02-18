@@ -341,7 +341,6 @@ const handleDelete = async (projectid) => {
             <button type="button" class="btn btn-secondary" @click="showModal = false">Close</button>
             <button type="button" class="btn btn-teal" @click="showModal = false; openEdit(showProject)"><i class="bi bi-pencil me-1"></i>Edit</button>
           </div>
-          
         </div>
       </div>
     </div>
