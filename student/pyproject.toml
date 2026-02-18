@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Dependencies: listed here and in requirements.txt (kept in sync).
+# - pyproject.toml: used when building the wheel (python -m build) and for pip install -e .
+# - requirements.txt: used for pip install -r (Docker, venv, CI). Both are supported.
+
+[project]
+name = "internhub-backend"
+version = "1.0.0"
+description = "InternHub API backend (FastAPI)"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "python-multipart>=0.0.9",
+    "supabase>=2.0.0",
+    "bcrypt>=4.0.0",
+    "python-jose[cryptography]>=3.3.0",
+    "openpyxl>=3.1.0",
+    "reportlab>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "httpx>=0.27.0",
+    "build>=1.0.0",
+]
+
+[project.scripts]
+internhub-serve = "main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["config*", "api*", "services*", "schemas*", "utils*", "db*"]
+exclude = ["tests*"]
+
+[tool.setuptools]
+py-modules = ["app", "main"]
