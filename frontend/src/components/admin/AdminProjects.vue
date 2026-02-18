@@ -1,22 +1,24 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { projectsApi, exportApi } from '../../services/api'
+import { ref, onMounted, watch } from 'vue'
+import { projectsApi, exportApi, usersApi } from '@/services/api'
 
 const projects = ref([])
+const managers = ref([])
 const loading = ref(false)
 const error = ref('')
 const successMsg = ref('')
 const subTab = ref('list')
 
-const filters = ref({ status: '', search: '', date_from: '', date_to: '', sort: 'created_at', order: 'desc', page: 1, limit: 20 })
-
+const filters = ref({ status: '', search: '', sort: 'created_at', order: 'desc', page: 1, limit: 20 })
 const addForm = ref({ title: '', description: '', start_date: '', end_date: '' })
 
 const editModal = ref(false)
 const assignModal = ref(false)
+const showModal = ref(false)
+const showProject = ref(null)
 const editProject = ref(null)
 const assignProject = ref(null)
-const editForm = ref({ title: '', description: '', status: '', start_date: '', end_date: '' })
+const editForm = ref({ title: '', description: '', status: '', start_date: '', end_date: '', manager_userid: '' })
 const assignForm = ref({ manager_userid: '' })
 
 const fetchProjects = async () => {
@@ -26,8 +28,6 @@ const fetchProjects = async () => {
     const params = { page: filters.value.page, limit: filters.value.limit }
     if (filters.value.status) params.status = filters.value.status
     if (filters.value.search) params.search = filters.value.search
-    if (filters.value.date_from) params.date_from = filters.value.date_from
-    if (filters.value.date_to) params.date_to = filters.value.date_to
     params.sort = filters.value.sort
     params.order = filters.value.order
     const res = await projectsApi.list(params)
@@ -51,7 +51,29 @@ async function exportCsv() {
   } catch (_) {}
 }
 
-onMounted(() => fetchProjects())
+const managersLoading = ref(false)
+const managersError = ref('')
+const fetchManagers = async () => {
+  managersLoading.value = true
+  managersError.value = ''
+  try {
+    const res = await usersApi.list({ role: 'manager', limit: 100 })
+    managers.value = res.users || []
+  } catch (err) {
+    managers.value = []
+    managersError.value = err.response?.data?.detail || 'Failed to load managers'
+  } finally {
+    managersLoading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchProjects()
+  fetchManagers()
+})
+
+watch(assignModal, (v) => { if (v) fetchManagers() })
+watch(editModal, (v) => { if (v) fetchManagers() })
 
 const handleCreate = async () => {
   loading.value = true
@@ -64,11 +86,26 @@ const handleCreate = async () => {
     await projectsApi.create(data)
     successMsg.value = 'Project created'
     addForm.value = { title: '', description: '', start_date: '', end_date: '' }
+    subTab.value = 'list'
     fetchProjects()
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to create project'
   } finally {
     loading.value = false
+  }
+}
+
+const openShow = async (p) => {
+  showProject.value = p
+  showModal.value = true
+  try {
+    const [projRes, mgrRes] = await Promise.all([
+      projectsApi.getById(p.projectid),
+      projectsApi.getManagers(p.projectid)
+    ])
+    showProject.value = { ...p, ...(projRes.project || projRes), managers: mgrRes.managers || [] }
+  } catch {
+    showProject.value = { ...p, managers: [] }
   }
 }
 
@@ -80,6 +117,7 @@ const openEdit = (p) => {
     status: p.status || '',
     start_date: p.start_date ? p.start_date.slice(0, 10) : '',
     end_date: p.end_date ? p.end_date.slice(0, 10) : '',
+    manager_userid: '',
   }
   editModal.value = true
 }
@@ -91,11 +129,16 @@ const handleUpdate = async () => {
   successMsg.value = ''
   try {
     const data = { ...editForm.value }
+    const manager_userid = data.manager_userid
+    delete data.manager_userid
     if (!data.start_date) delete data.start_date
     if (!data.end_date) delete data.end_date
     if (!data.status) delete data.status
     await projectsApi.update(editProject.value.projectid, data)
-    successMsg.value = 'Project updated'
+    if (manager_userid) {
+      await projectsApi.assignManager(editProject.value.projectid, manager_userid)
+    }
+    successMsg.value = 'Project updated' + (manager_userid ? ' and manager assigned' : '')
     editModal.value = false
     fetchProjects()
   } catch (err) {
@@ -105,15 +148,16 @@ const handleUpdate = async () => {
   }
 }
 
-const openAssign = (p) => {
+const openAssign = async (p) => {
   assignProject.value = p
   assignForm.value = { manager_userid: '' }
+  await fetchManagers()
   assignModal.value = true
 }
 
 const handleAssignManager = async () => {
   if (!assignProject.value || !assignForm.value.manager_userid) {
-    error.value = 'Enter manager user ID'
+    error.value = 'Select a manager'
     return
   }
   loading.value = true
@@ -129,6 +173,12 @@ const handleAssignManager = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const statusBadgeClass = (status) => {
+  if (status === 'active') return 'badge-active'
+  if (status === 'completed') return 'badge-completed'
+  return 'badge-default'
 }
 
 const handleDelete = async (projectid) => {
@@ -149,186 +199,268 @@ const handleDelete = async (projectid) => {
 </script>
 
 <template>
-  <div class="admin-projects">
-    <div class="tabs">
-      <button :class="{ active: subTab === 'list' }" @click="subTab = 'list'">List Projects</button>
-      <button :class="{ active: subTab === 'add' }" @click="subTab = 'add'">Create Project</button>
+  <div class="section-content">
+    <div class="section-tabs d-flex gap-2 mb-4">
+      <button type="button" :class="['section-tab', { active: subTab === 'list' }]" @click="subTab = 'list'">
+        <i class="bi bi-folder2-open me-2"></i>List Projects
+      </button>
+      <button type="button" :class="['section-tab', { active: subTab === 'add' }]" @click="subTab = 'add'">
+        <i class="bi bi-plus-circle me-2"></i>Create Project
+      </button>
     </div>
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+
+    <div v-if="error" class="alert alert-danger">{{ error }}</div>
     <div v-if="successMsg" class="alert alert-success">{{ successMsg }}</div>
 
-    <div v-show="subTab === 'list'" class="content-block">
-      <div class="filters">
-        <button type="button" class="btn btn-secondary" @click="exportCsv">Export CSV</button>
-        <input v-model="filters.search" placeholder="Search title or description" @keyup.enter="fetchProjects" class="search-inp" />
-        <select v-model="filters.status" @change="fetchProjects">
-          <option value="">All Status</option>
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-        </select>
-        <input v-model="filters.date_from" type="date" placeholder="From" @change="fetchProjects" />
-        <input v-model="filters.date_to" type="date" placeholder="To" @change="fetchProjects" />
-        <select v-model="filters.sort" @change="fetchProjects">
-          <option value="created_at">Created</option>
-          <option value="start_date">Start Date</option>
-          <option value="title">Title</option>
-        </select>
-        <select v-model="filters.order" @change="fetchProjects">
-          <option value="desc">Desc</option>
-          <option value="asc">Asc</option>
-        </select>
-        <button class="btn btn-primary" @click="fetchProjects">Search</button>
-      </div>
-      <div v-if="loading" class="loading">Loading...</div>
-      <div v-else class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Dates</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="p in projects" :key="p.projectid">
-            <td>{{ p.title }}</td>
-            <td>{{ (p.description || '').slice(0, 50) }}...</td>
-            <td>{{ p.status || '-' }}</td>
-            <td>{{ p.start_date || '-' }} / {{ p.end_date || '-' }}</td>
-            <td>
-              <button class="btn-sm btn-edit" @click="openEdit(p)">Edit</button>
-              <button class="btn-sm btn-assign" @click="openAssign(p)">Assign</button>
-              <button class="btn-sm btn-delete" @click="handleDelete(p.projectid)">Delete</button>
-            </td>
-          </tr>
-          <tr v-if="projects.length === 0">
-            <td colspan="5" class="empty">No projects found</td>
-          </tr>
-        </tbody>
-      </table>
-      </div>
-    </div>
-
-    <div v-show="subTab === 'add'" class="content-block">
-      <form @submit.prevent="handleCreate" class="form-add">
-        <div class="form-group">
-          <label>Title *</label>
-          <input v-model="addForm.title" required placeholder="Project title" />
-        </div>
-        <div class="form-group">
-          <label>Description</label>
-          <textarea v-model="addForm.description" rows="3" placeholder="Project description"></textarea>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Start Date</label>
-            <input v-model="addForm.start_date" type="date" />
+    <div v-show="subTab === 'list'" class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="section-filters row g-2 align-items-center mb-3">
+          <div class="col-auto">
+            <button type="button" class="btn btn-outline-secondary" @click="exportCsv">
+              <i class="bi bi-download me-1"></i>Export CSV
+            </button>
           </div>
-          <div class="form-group">
-            <label>End Date</label>
-            <input v-model="addForm.end_date" type="date" />
+          <div class="col-md-4">
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+              <input v-model="filters.search" type="text" class="form-control" placeholder="Search title or description" @keyup.enter="fetchProjects" />
+            </div>
           </div>
-        </div>
-        <button type="submit" class="btn btn-primary" :disabled="loading">Create Project</button>
-      </form>
-    </div>
-
-    <div v-if="editModal" class="modal-overlay" @click="editModal = false">
-      <div class="modal-content" @click.stop>
-        <h3>Edit Project</h3>
-        <form @submit.prevent="handleUpdate">
-          <div class="form-group">
-            <label>Title</label>
-            <input v-model="editForm.title" required />
-          </div>
-          <div class="form-group">
-            <label>Description</label>
-            <textarea v-model="editForm.description" rows="3"></textarea>
-          </div>
-          <div class="form-group">
-            <label>Status</label>
-            <select v-model="editForm.status">
-              <option value="">--</option>
+          <div class="col-auto">
+            <select v-model="filters.status" class="form-select" @change="fetchProjects">
+              <option value="">All Status</option>
               <option value="active">Active</option>
               <option value="completed">Completed</option>
             </select>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Start Date</label>
-              <input v-model="editForm.start_date" type="date" />
-            </div>
-            <div class="form-group">
-              <label>End Date</label>
-              <input v-model="editForm.end_date" type="date" />
-            </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-teal" @click="fetchProjects">
+              <i class="bi bi-search me-1"></i>Search
+            </button>
           </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="editModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="loading">Save</button>
+        </div>
+
+        <div v-if="loading" class="text-center py-5 text-muted">Loading...</div>
+        <div v-else class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in projects" :key="p.projectid">
+                <td>{{ p.title }}</td>
+                <td class="text-truncate" style="max-width: 200px">{{ (p.description || '').slice(0, 50) }}{{ (p.description || '').length > 50 ? '...' : '' }}</td>
+                <td><span class="badge" :class="statusBadgeClass(p.status)">{{ p.status || '-' }}</span></td>
+                <td>{{ p.start_date ? p.start_date.slice(0, 10) : '-' }}</td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-sm btn-action btn-view" @click="openShow(p)" title="View"><i class="bi bi-eye me-1"></i>View</button>
+                  <button type="button" class="btn btn-sm btn-action btn-edit" @click="openEdit(p)" title="Edit"><i class="bi bi-pencil me-1"></i>Edit</button>
+                  <button type="button" class="btn btn-sm btn-action btn-assign" @click="openAssign(p)" title="Assign Manager"><i class="bi bi-person-plus me-1"></i>Assign</button>
+                  <button type="button" class="btn btn-sm btn-action btn-delete" @click="handleDelete(p.projectid)" title="Delete"><i class="bi bi-trash"></i></button>
+                </td>
+              </tr>
+              <tr v-if="projects.length === 0">
+                <td colspan="5" class="text-center text-muted py-4">No projects found</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div v-show="subTab === 'add'" class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form @submit.prevent="handleCreate" class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Title *</label>
+            <input v-model="addForm.title" type="text" class="form-control" required placeholder="Project title" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea v-model="addForm.description" class="form-control" rows="3" placeholder="Project description"></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Start Date</label>
+            <input v-model="addForm.start_date" type="date" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">End Date</label>
+            <input v-model="addForm.end_date" type="date" class="form-control" />
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-teal" :disabled="loading">Create Project</button>
           </div>
         </form>
       </div>
     </div>
 
-    <div v-if="assignModal" class="modal-overlay" @click="assignModal = false">
-      <div class="modal-content" @click.stop>
-        <h3>Assign Manager</h3>
-        <p class="muted">{{ assignProject?.title }}</p>
-        <form @submit.prevent="handleAssignManager">
-          <div class="form-group">
-            <label>Manager User ID *</label>
-            <input v-model="assignForm.manager_userid" required placeholder="e.g. MGR001" />
+    <div v-if="showModal" class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)" @click.self="showModal = false">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Project Details</h5>
+            <button type="button" class="btn-close" @click="showModal = false"></button>
           </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="assignModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="loading">Assign</button>
+          <div class="modal-body" v-if="showProject">
+            <div class="project-detail-grid">
+              <div class="detail-row">
+                <span class="detail-label">Title</span>
+                <span class="detail-value">{{ showProject.title }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Description</span>
+                <span class="detail-value">{{ showProject.description || '-' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Status</span>
+                <span><span class="badge" :class="statusBadgeClass(showProject.status)">{{ showProject.status || '-' }}</span></span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Start Date</span>
+                <span class="detail-value">{{ showProject.start_date ? showProject.start_date.slice(0, 10) : '-' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">End Date</span>
+                <span class="detail-value">{{ showProject.end_date ? showProject.end_date.slice(0, 10) : '-' }}</span>
+              </div>
+              <div class="detail-row" v-if="showProject.managers && showProject.managers.length">
+                <span class="detail-label">Assigned Managers</span>
+                <span class="detail-value">
+                  <span v-for="a in showProject.managers" :key="a.manager_userid" class="badge bg-secondary me-1">{{ a.username || a.manager_userid }} ({{ a.manager_userid }})</span>
+                </span>
+              </div>
+            </div>
           </div>
-        </form>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="showModal = false">Close</button>
+            <button type="button" class="btn btn-teal" @click="showModal = false; openEdit(showProject)"><i class="bi bi-pencil me-1"></i>Edit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="editModal" class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Project</h5>
+            <button type="button" class="btn-close" @click="editModal = false"></button>
+          </div>
+          <form @submit.prevent="handleUpdate">
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input v-model="editForm.title" type="text" class="form-control" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea v-model="editForm.description" class="form-control" rows="3"></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Status</label>
+                <select v-model="editForm.status" class="form-select">
+                  <option value="">--</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+              <div class="row g-2">
+                <div class="col-6">
+                  <label class="form-label">Start Date</label>
+                  <input v-model="editForm.start_date" type="date" class="form-control" />
+                </div>
+                <div class="col-6">
+                  <label class="form-label">End Date</label>
+                  <input v-model="editForm.end_date" type="date" class="form-control" />
+                </div>
+              </div>
+              <div class="mb-3 mt-3">
+                <label class="form-label">Assign Manager</label>
+                <select v-model="editForm.manager_userid" class="form-select">
+                  <option value="">-- None / Skip --</option>
+                  <option v-for="m in managers" :key="m.userid" :value="m.userid">{{ m.username || m.userid }} ({{ m.userid }})</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" @click="editModal = false">Cancel</button>
+              <button type="submit" class="btn btn-teal" :disabled="loading">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="assignModal" class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Assign Manager</h5>
+            <button type="button" class="btn-close" @click="assignModal = false"></button>
+          </div>
+          <form @submit.prevent="handleAssignManager">
+            <div class="modal-body">
+              <p class="text-muted small mb-3">{{ assignProject?.title }}</p>
+              <label class="form-label">Select Manager *</label>
+              <select v-model="assignForm.manager_userid" class="form-select" required>
+                <option value="">{{ managersLoading ? 'Loading managers...' : '-- Select Manager --' }}</option>
+                <option v-for="m in managers" :key="m.userid" :value="m.userid">{{ m.username || m.userid }} ({{ m.userid }})</option>
+              </select>
+              <p v-if="managersError" class="text-danger small mt-2 mb-0">{{ managersError }}</p>
+              <p v-else-if="!managersLoading && managers.length === 0" class="text-muted small mt-2 mb-0">No managers found. Add manager users first.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" @click="assignModal = false">Cancel</button>
+              <button type="submit" class="btn btn-assign-submit" :disabled="loading">Assign</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.admin-projects { width: 100%; }
-.tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-.tabs button { padding: 0.5rem 1rem; border: 2px solid color-mix(in srgb, var(--color-border) 90%, transparent); background: var(--color-surface); border-radius: 8px; font-weight: 600; cursor: pointer; color: var(--color-muted); }
-.tabs button.active { background: var(--color-primary); border-color: var(--color-primary); color: white; }
-.alert { padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
-.alert-error { background: var(--color-danger-bg); color: var(--color-danger); }
-.alert-success { background: var(--color-success-bg); color: var(--color-success); }
-.content-block { background: var(--color-surface); padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent); }
-.filters { display: flex; gap: 0.75rem; margin-bottom: 1rem; }
-.filters select { padding: 0.5rem; border: 2px solid color-mix(in srgb, var(--color-border) 90%, transparent); border-radius: 8px; background: var(--color-surface); color: var(--color-text); }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th, .data-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent); }
-.data-table th { font-weight: 600; background: color-mix(in srgb, var(--color-surface-2) 70%, var(--color-surface)); color: color-mix(in srgb, var(--color-heading) 85%, transparent); }
-.data-table td.empty { text-align: center; color: var(--color-muted); padding: 2rem; }
-.btn-sm { padding: 0.35rem 0.65rem; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; margin-right: 0.5rem; }
-.btn-edit { background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface)); color: var(--color-primary-strong); }
-.btn-assign { background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface)); color: var(--color-accent-strong); }
-.btn-delete { background: var(--color-danger-bg); color: var(--color-danger); }
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; font-weight: 600; margin-bottom: 0.35rem; }
-.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.5rem 0.75rem; border: 2px solid color-mix(in srgb, var(--color-border) 90%, transparent); border-radius: 8px; background: var(--color-surface); color: var(--color-text); }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.btn { padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; }
-.btn-primary { background: var(--color-primary); color: white; }
-.btn-secondary { background: color-mix(in srgb, var(--color-surface-2) 70%, var(--color-surface)); color: var(--color-muted); }
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal-content { background: var(--color-surface); border-radius: 12px; padding: 2rem; max-width: 480px; width: 100%; border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent); }
-.modal-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
-.muted { color: var(--color-muted); font-size: 0.9rem; margin-bottom: 1rem; }
-
-.admin-projects .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.admin-projects .data-table { min-width: 520px; }
-@media (max-width: 768px) {
-  .admin-projects .filters { flex-direction: column; }
-  .admin-projects .form-row { grid-template-columns: 1fr; }
-  .admin-projects .data-table th, .admin-projects .data-table td { padding: 0.5rem; font-size: 0.85rem; }
+.section-tab {
+  padding: 0.5rem 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
 }
+.section-tab:hover { border-color: #20BFB6; color: #20BFB6; }
+.section-tab.active {
+  background: linear-gradient(135deg, #00AACC 0%, #00BF80 100%);
+  border-color: transparent;
+  color: white;
+}
+.btn-teal { background: linear-gradient(135deg, #00AACC 0%, #00BF80 100%); border: none; color: white; font-weight: 600; }
+.btn-teal:hover { opacity: 0.95; color: white; }
+.btn-action { padding: 0.35rem 0.65rem; font-size: 0.85rem; border-radius: 8px; margin-left: 0.25rem; }
+.btn-edit { border: 1px solid #0d6efd; color: #0d6efd; background: rgba(13, 110, 253, 0.08); }
+.btn-edit:hover { background: rgba(13, 110, 253, 0.15); color: #0d6efd; }
+.btn-assign { border: 1px solid #f59e0b; color: #d97706; background: rgba(245, 158, 11, 0.15); }
+.btn-assign:hover { background: rgba(245, 158, 11, 0.25); color: #b45309; border-color: #f59e0b; }
+.btn-view { border: 1px solid #64748b; color: #475569; background: rgba(100, 116, 139, 0.08); }
+.btn-view:hover { background: rgba(100, 116, 139, 0.15); color: #334155; }
+.btn-delete { border: 1px solid #dc3545; color: #dc3545; background: rgba(220, 53, 69, 0.08); }
+.btn-delete:hover { background: rgba(220, 53, 69, 0.15); color: #dc3545; }
+.badge-active { background: #86efac; color: #166534; }
+.badge-completed { background: #93c5fd; color: #1e40af; }
+.badge-default { background: #cbd5e1; color: #475569; }
+.btn-assign-submit { background: #fed7aa; color: #c2410c; border: 1px solid #fdba74; font-weight: 600; }
+.btn-assign-submit:hover { background: #fdba74; color: #9a3412; border-color: #f59e0b; }
+.project-detail-grid { display: flex; flex-direction: column; gap: 1rem; }
+.detail-row { display: flex; flex-direction: column; gap: 0.25rem; }
+.detail-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; }
+.detail-value { font-size: 0.95rem; color: #0f172a; white-space: pre-wrap; word-break: break-word; }
 </style>

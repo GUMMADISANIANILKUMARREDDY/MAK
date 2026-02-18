@@ -44,6 +44,35 @@ a,
   min-width: 600px;
 }
 
+/* Dashboard selects: Tailwind-style look and light animation */
+.dashboard select {
+  @apply px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 outline-none transition-all duration-150;
+  @apply hover:border-gray-400;
+  font-size: inherit;
+  min-height: 2.25rem;
+  cursor: pointer;
+}
+
+.dashboard select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.dashboard select:disabled {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  .dashboard select {
+    @apply border-gray-600 bg-gray-800 text-gray-100 hover:border-gray-500;
+  }
+
+  .dashboard select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  }
+}
+
 @media (max-width: 768px) {
   .table-wrapper {
     margin: 0 -1rem;

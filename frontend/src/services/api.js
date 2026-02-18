@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'https://mak-a3dk.onrender.com/'
+const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8001'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -43,6 +43,9 @@ api.interceptors.response.use(
 export const usersApi = {
   list(params) {
     return api.get('/admin/users/', { params }).then(res => res.data)
+  },
+  listByRole(role, params = {}) {
+    return api.get(`/admin/users/role/${role}`, { params }).then(res => res.data)
   },
   getById(userid) {
     return api.get(`/admin/users/${userid}`).then(res => res.data)

@@ -30,49 +30,67 @@ onMounted(() => fetchLogs())
 </script>
 
 <template>
-  <div class="admin-activity-logs">
-    <h3>Activity Logs</h3>
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div class="filters">
-      <input v-model="filters.userid" placeholder="User ID" @keyup.enter="fetchLogs" />
-      <input v-model="filters.entity_type" placeholder="Entity type" @keyup.enter="fetchLogs" />
-      <input v-model="filters.entity_id" placeholder="Entity ID" @keyup.enter="fetchLogs" />
-      <input v-model="filters.date_from" type="date" />
-      <input v-model="filters.date_to" type="date" />
-      <button class="btn btn-primary" @click="fetchLogs">Search</button>
-    </div>
-    <div v-if="loading" class="loading">Loading...</div>
-    <div v-else class="content-block">
-      <table class="logs-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>User</th>
-            <th>Action</th>
-            <th>Entity</th>
-            <th>ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="log in logs" :key="log.id">
-            <td>{{ log.created_at ? new Date(log.created_at).toLocaleString() : '' }}</td>
-            <td>{{ log.userid }}</td>
-            <td>{{ log.action }}</td>
-            <td>{{ log.entity_type }}</td>
-            <td>{{ log.entity_id }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-if="logs.length === 0" class="empty">No activity logs.</p>
+  <div class="section-content">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title mb-4">Activity Logs</h5>
+        <div v-if="error" class="alert alert-danger">{{ error }}</div>
+
+        <div class="section-filters row g-2 align-items-center mb-3">
+          <div class="col-md-2">
+            <input v-model="filters.userid" type="text" class="form-control" placeholder="User ID" @keyup.enter="fetchLogs" />
+          </div>
+          <div class="col-md-2">
+            <input v-model="filters.entity_type" type="text" class="form-control" placeholder="Entity type" @keyup.enter="fetchLogs" />
+          </div>
+          <div class="col-md-2">
+            <input v-model="filters.entity_id" type="text" class="form-control" placeholder="Entity ID" @keyup.enter="fetchLogs" />
+          </div>
+          <div class="col-auto">
+            <input v-model="filters.date_from" type="date" class="form-control" @change="fetchLogs" />
+          </div>
+          <div class="col-auto">
+            <input v-model="filters.date_to" type="date" class="form-control" @change="fetchLogs" />
+          </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-teal" @click="fetchLogs">
+              <i class="bi bi-search me-1"></i>Search
+            </button>
+          </div>
+        </div>
+
+        <div v-if="loading" class="text-center py-5 text-muted">Loading...</div>
+        <div v-else class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="log in logs" :key="log.id">
+                <td>{{ log.created_at ? new Date(log.created_at).toLocaleString() : '' }}</td>
+                <td>{{ log.userid }}</td>
+                <td><span class="badge bg-secondary">{{ log.action }}</span></td>
+                <td>{{ log.entity_type }}</td>
+                <td>{{ log.entity_id }}</td>
+              </tr>
+              <tr v-if="logs.length === 0">
+                <td colspan="5" class="text-center text-muted py-4">No activity logs</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
-.filters input { padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid var(--color-border, #e5e7eb); }
-.logs-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.logs-table th, .logs-table td { padding: 0.5rem; border-bottom: 1px solid var(--color-border); text-align: left; }
-.logs-table th { background: var(--color-surface-2, #f3f4f6); }
-.empty { color: var(--color-muted); padding: 1rem; }
+.btn-teal { background: linear-gradient(135deg, #00AACC 0%, #00BF80 100%); border: none; color: white; font-weight: 600; }
+.btn-teal:hover { opacity: 0.95; color: white; }
 </style>

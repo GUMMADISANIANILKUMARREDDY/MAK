@@ -293,20 +293,20 @@ h2 {
 
 .error-message {
   padding: 0.75rem 1rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--color-danger-bg);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 32%, transparent);
   border-radius: 8px;
-  color: #dc2626;
+  color: var(--color-danger);
   font-size: 0.9rem;
   margin-bottom: 1rem;
 }
 
 .success-message {
   padding: 0.75rem 1rem;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--color-success-bg);
+  border: 1px solid color-mix(in srgb, var(--color-success) 28%, transparent);
   border-radius: 8px;
-  color: #16a34a;
+  color: var(--color-success);
   font-size: 0.9rem;
   margin-bottom: 1rem;
 }

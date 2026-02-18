@@ -1,25 +1,17 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { usersApi } from '../../services/api'
+import { usersApi } from '@/services/api'
 
 const users = ref([])
 const loading = ref(false)
 const error = ref('')
 const successMsg = ref('')
-const subTab = ref('list') // list | add | bulk-add | bulk-delete
+const subTab = ref('list')
 
-const filters = ref({ role: '', name: '', email: '', active: '', search: '', sort: 'userid', order: 'asc', page: 1, limit: 20 })
+const filters = ref({ role: '', search: '', active: '', sort: 'userid', order: 'asc', page: 1, limit: 20 })
 const totalPages = ref(1)
 
-const addForm = ref({
-  userid: '',
-  username: '',
-  email: '',
-  password: '',
-  role: 'student',
-  active: true,
-})
-
+const addForm = ref({ userid: '', username: '', email: '', password: '', role: 'student', active: true })
 const bulkForm = ref({ users: [{ userid: '', username: '', email: '', password: '', role: 'student', active: true }] })
 const bulkDeleteIds = ref('')
 
@@ -35,15 +27,12 @@ const fetchUsers = async () => {
   try {
     const params = {}
     if (filters.value.role) params.role = filters.value.role
-    if (filters.value.name) params.name = filters.value.name
-    if (filters.value.email) params.email = filters.value.email
-    if (filters.value.active !== '') params.active = filters.value.active === 'true'
     if (filters.value.search) params.search = filters.value.search
+    if (filters.value.active !== '') params.active = filters.value.active === 'true'
     params.sort = filters.value.sort
     params.order = filters.value.order
     params.page = filters.value.page
     params.limit = filters.value.limit
-
     const res = await usersApi.list(params)
     users.value = res.users || []
     totalPages.value = Math.ceil((res.total || users.value.length) / filters.value.limit) || 1
@@ -64,6 +53,7 @@ const handleAddUser = async () => {
     await usersApi.createSingle(addForm.value)
     successMsg.value = 'User added successfully'
     addForm.value = { userid: '', username: '', email: '', password: '', role: 'student', active: true }
+    subTab.value = 'list'
     fetchUsers()
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to add user'
@@ -76,14 +66,10 @@ const addBulkRow = () => {
   bulkForm.value.users.push({ userid: '', username: '', email: '', password: '', role: 'student', active: true })
 }
 
-const removeBulkRow = (i) => {
-  bulkForm.value.users.splice(i, 1)
-}
+const removeBulkRow = (i) => bulkForm.value.users.splice(i, 1)
 
 const handleBulkAdd = async () => {
-  const valid = bulkForm.value.users.filter(
-    (u) => u.userid && u.username && u.email && u.password
-  )
+  const valid = bulkForm.value.users.filter((u) => u.userid && u.username && u.email && u.password)
   if (valid.length === 0) {
     error.value = 'Add at least one user with userid, username, email, password'
     return
@@ -95,6 +81,7 @@ const handleBulkAdd = async () => {
     const res = await usersApi.createBulk({ users: valid })
     successMsg.value = `Added ${res.created} user(s). ${res.errors?.length ? 'Errors: ' + res.errors.length : ''}`
     bulkForm.value.users = [{ userid: '', username: '', email: '', password: '', role: 'student', active: true }]
+    subTab.value = 'list'
     fetchUsers()
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to add users'
@@ -158,6 +145,7 @@ const handleBulkDelete = async () => {
     const res = await usersApi.bulkDelete(ids, true)
     successMsg.value = `Deleted ${res.deleted} user(s)`
     bulkDeleteIds.value = ''
+    subTab.value = 'list'
     fetchUsers()
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to delete users'
@@ -168,488 +156,227 @@ const handleBulkDelete = async () => {
 </script>
 
 <template>
-  <div class="admin-users">
-    <div class="tabs">
-      <button :class="{ active: subTab === 'list' }" @click="subTab = 'list'">List Users</button>
-      <button :class="{ active: subTab === 'add' }" @click="subTab = 'add'">Add User</button>
-      <button :class="{ active: subTab === 'bulk-add' }" @click="subTab = 'bulk-add'">Bulk Add</button>
-      <button :class="{ active: subTab === 'bulk-delete' }" @click="subTab = 'bulk-delete'">Bulk Delete</button>
+  <div class="section-content">
+    <div class="section-tabs d-flex gap-2 mb-4">
+      <button type="button" :class="['section-tab', { active: subTab === 'list' }]" @click="subTab = 'list'">
+        <i class="bi bi-people-fill me-2"></i>List Users
+      </button>
+      <button type="button" :class="['section-tab', { active: subTab === 'add' }]" @click="subTab = 'add'">
+        <i class="bi bi-person-plus me-2"></i>Add User
+      </button>
+      <button type="button" :class="['section-tab', { active: subTab === 'bulk-add' }]" @click="subTab = 'bulk-add'">
+        <i class="bi bi-cloud-upload me-2"></i>Bulk Add
+      </button>
+      <button type="button" :class="['section-tab', { active: subTab === 'bulk-delete' }]" @click="subTab = 'bulk-delete'">
+        <i class="bi bi-trash me-2 text-danger"></i>Bulk Delete
+      </button>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div v-if="error" class="alert alert-danger">{{ error }}</div>
     <div v-if="successMsg" class="alert alert-success">{{ successMsg }}</div>
 
-    <!-- List Users -->
-    <div v-show="subTab === 'list'" class="content-block">
-      <div class="filters">
-        <input v-model="filters.search" placeholder="Search username, email, ID" @keyup.enter="fetchUsers" class="search-inp" />
-        <select v-model="filters.role" @change="fetchUsers">
-          <option value="">All Roles</option>
-          <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
-        </select>
-        <input v-model="filters.name" placeholder="Name" @keyup.enter="fetchUsers" />
-        <input v-model="filters.email" placeholder="Email" @keyup.enter="fetchUsers" />
-        <select v-model="filters.active" @change="fetchUsers">
-          <option value="">All</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </select>
-        <select v-model="filters.sort" @change="fetchUsers">
-          <option value="userid">User ID</option>
-          <option value="username">Username</option>
-          <option value="email">Email</option>
-          <option value="role">Role</option>
-        </select>
-        <select v-model="filters.order" @change="fetchUsers">
-          <option value="asc">Asc</option>
-          <option value="desc">Desc</option>
-        </select>
-        <button class="btn btn-primary" @click="fetchUsers">Search</button>
-      </div>
-
-      <div v-if="loading" class="loading">Loading...</div>
-      <div v-else class="table-wrapper">
-      <table class="users-table">
-        <thead>
-          <tr>
-            <th>User ID</th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Active</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="u in users" :key="u.userid">
-            <td>{{ u.userid }}</td>
-            <td>{{ u.username }}</td>
-            <td>{{ u.email }}</td>
-            <td>{{ u.role }}</td>
-            <td>{{ u.active ? 'Yes' : 'No' }}</td>
-            <td>
-              <button class="btn-sm btn-edit" @click="openEdit(u)">Edit</button>
-              <button class="btn-sm btn-delete" @click="handleDeleteUser(u.userid)">Delete</button>
-            </td>
-          </tr>
-          <tr v-if="users.length === 0">
-            <td colspan="6" class="empty">No users found</td>
-          </tr>
-        </tbody>
-      </table>
-      </div>
-    </div>
-
-    <!-- Add User -->
-    <div v-show="subTab === 'add'" class="content-block">
-      <form @submit.prevent="handleAddUser" class="form-add">
-        <div class="form-row">
-          <div class="form-group">
-            <label>User ID *</label>
-            <input v-model="addForm.userid" required placeholder="e.g. EMP001" />
+    <div v-show="subTab === 'list'" class="card border-0 shadow-sm">
+      <div class="card-body">
+        <div class="section-filters row g-2 align-items-center mb-3">
+          <div class="col-md-4">
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+              <input v-model="filters.search" type="text" class="form-control" placeholder="Search username, email, ID" @keyup.enter="fetchUsers" />
+            </div>
           </div>
-          <div class="form-group">
-            <label>Username *</label>
-            <input v-model="addForm.username" required placeholder="Full name" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Email *</label>
-          <input v-model="addForm.email" type="email" required placeholder="email@example.com" />
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Password *</label>
-            <input v-model="addForm.password" type="password" required placeholder="Password" />
-          </div>
-          <div class="form-group">
-            <label>Role</label>
-            <select v-model="addForm.role">
+          <div class="col-auto">
+            <select v-model="filters.role" class="form-select" @change="fetchUsers">
+              <option value="">All Roles</option>
               <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
             </select>
           </div>
+          <div class="col-auto">
+            <select v-model="filters.active" class="form-select" @change="fetchUsers">
+              <option value="">All</option>
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <button type="button" class="btn btn-teal" @click="fetchUsers">
+              <i class="bi bi-search me-1"></i>Search
+            </button>
+          </div>
         </div>
-        <div class="form-group checkbox">
-          <label><input v-model="addForm.active" type="checkbox" /> Active</label>
-        </div>
-        <button type="submit" class="btn btn-primary" :disabled="loading">Add User</button>
-      </form>
-    </div>
 
-    <!-- Bulk Add -->
-    <div v-show="subTab === 'bulk-add'" class="content-block">
-      <button class="btn btn-secondary" @click="addBulkRow">+ Add Row</button>
-      <form @submit.prevent="handleBulkAdd" class="form-bulk">
-        <div v-for="(u, i) in bulkForm.users" :key="i" class="bulk-row">
-          <input v-model="u.userid" placeholder="User ID" />
-          <input v-model="u.username" placeholder="Username" />
-          <input v-model="u.email" type="email" placeholder="Email" />
-          <input v-model="u.password" type="password" placeholder="Password" />
-          <select v-model="u.role">
-            <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
-          </select>
-          <button type="button" class="btn-remove" @click="removeBulkRow(i)">×</button>
+        <div v-if="loading" class="text-center py-5 text-muted">Loading...</div>
+        <div v-else class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Active</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="u in users" :key="u.userid">
+                <td>{{ u.userid }}</td>
+                <td>{{ u.username }}</td>
+                <td>{{ u.email }}</td>
+                <td><span class="badge bg-success">{{ u.role }}</span></td>
+                <td><span class="badge" :class="u.active ? 'bg-success' : 'bg-secondary'">{{ u.active ? 'Yes' : 'No' }}</span></td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-sm btn-action btn-edit" @click="openEdit(u)" title="Edit"><i class="bi bi-pencil"></i></button>
+                  <button type="button" class="btn btn-sm btn-action btn-delete" @click="handleDeleteUser(u.userid)" title="Delete"><i class="bi bi-trash"></i></button>
+                </td>
+              </tr>
+              <tr v-if="users.length === 0">
+                <td colspan="6" class="text-center text-muted py-4">No users found</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <button type="submit" class="btn btn-primary" :disabled="loading">Add All</button>
-      </form>
-    </div>
-
-    <!-- Bulk Delete -->
-    <div v-show="subTab === 'bulk-delete'" class="content-block">
-      <div class="form-group">
-        <label>User IDs (comma or space separated)</label>
-        <textarea v-model="bulkDeleteIds" rows="4" placeholder="EMP001, EMP002, EMP003"></textarea>
       </div>
-      <button class="btn btn-danger" @click="handleBulkDelete" :disabled="loading">Delete Selected</button>
     </div>
 
-    <!-- Edit Modal -->
-    <div v-if="editModal" class="modal-overlay" @click="editModal = false">
-      <div class="modal-content" @click.stop>
-        <h3>Edit User</h3>
-        <form @submit.prevent="handleUpdateUser">
-          <div class="form-group">
-            <label>Username</label>
-            <input v-model="editForm.username" required />
+    <div v-show="subTab === 'add'" class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form @submit.prevent="handleAddUser" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">User ID *</label>
+            <input v-model="addForm.userid" type="text" class="form-control" required placeholder="e.g. EMP001" />
           </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input v-model="editForm.email" type="email" required />
+          <div class="col-md-6">
+            <label class="form-label">Username *</label>
+            <input v-model="addForm.username" type="text" class="form-control" required placeholder="Full name" />
           </div>
-          <div class="form-group">
-            <label>Password (leave blank to keep)</label>
-            <input v-model="editForm.password" type="password" placeholder="New password" />
+          <div class="col-12">
+            <label class="form-label">Email *</label>
+            <input v-model="addForm.email" type="email" class="form-control" required placeholder="email@example.com" />
           </div>
-          <div class="form-group">
-            <label>Role</label>
-            <select v-model="editForm.role">
+          <div class="col-md-6">
+            <label class="form-label">Password *</label>
+            <input v-model="addForm.password" type="password" class="form-control" required placeholder="Password" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Role</label>
+            <select v-model="addForm.role" class="form-select">
               <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
             </select>
           </div>
-          <div class="form-group checkbox">
-            <label><input v-model="editForm.active" type="checkbox" /> Active</label>
+          <div class="col-12">
+            <div class="form-check">
+              <input v-model="addForm.active" type="checkbox" class="form-check-input" id="addActive" />
+              <label class="form-check-label" for="addActive">Active</label>
+            </div>
           </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="editModal = false">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="loading">Save</button>
+          <div class="col-12">
+            <button type="submit" class="btn btn-teal" :disabled="loading">Add User</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <div v-show="subTab === 'bulk-add'" class="card border-0 shadow-sm">
+      <div class="card-body">
+        <button type="button" class="btn btn-outline-secondary mb-3" @click="addBulkRow"><i class="bi bi-plus me-1"></i>Add Row</button>
+        <form @submit.prevent="handleBulkAdd">
+          <div v-for="(u, i) in bulkForm.users" :key="i" class="row g-2 align-items-center mb-2">
+            <div class="col"><input v-model="u.userid" class="form-control form-control-sm" placeholder="User ID" /></div>
+            <div class="col"><input v-model="u.username" class="form-control form-control-sm" placeholder="Username" /></div>
+            <div class="col"><input v-model="u.email" type="email" class="form-control form-control-sm" placeholder="Email" /></div>
+            <div class="col"><input v-model="u.password" type="password" class="form-control form-control-sm" placeholder="Password" /></div>
+            <div class="col-auto"><select v-model="u.role" class="form-select form-select-sm"><option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option></select></div>
+            <div class="col-auto"><button type="button" class="btn btn-sm btn-outline-danger" @click="removeBulkRow(i)"><i class="bi bi-x"></i></button></div>
+          </div>
+          <button type="submit" class="btn btn-teal mt-2" :disabled="loading">Add All</button>
+        </form>
+      </div>
+    </div>
+
+    <div v-show="subTab === 'bulk-delete'" class="card border-0 shadow-sm">
+      <div class="card-body">
+        <label class="form-label">User IDs (comma or space separated)</label>
+        <textarea v-model="bulkDeleteIds" class="form-control mb-3" rows="4" placeholder="EMP001, EMP002, EMP003"></textarea>
+        <button type="button" class="btn btn-danger" @click="handleBulkDelete" :disabled="loading">Delete Selected</button>
+      </div>
+    </div>
+
+    <div v-if="editModal" class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit User</h5>
+            <button type="button" class="btn-close" @click="editModal = false"></button>
+          </div>
+          <form @submit.prevent="handleUpdateUser">
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input v-model="editForm.username" type="text" class="form-control" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input v-model="editForm.email" type="email" class="form-control" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Password (leave blank to keep)</label>
+                <input v-model="editForm.password" type="password" class="form-control" placeholder="New password" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Role</label>
+                <select v-model="editForm.role" class="form-select">
+                  <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
+                </select>
+              </div>
+              <div class="form-check">
+                <input v-model="editForm.active" type="checkbox" class="form-check-input" id="editActive" />
+                <label class="form-check-label" for="editActive">Active</label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" @click="editModal = false">Cancel</button>
+              <button type="submit" class="btn btn-teal" :disabled="loading">Save</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.admin-users {
-  width: 100%;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.tabs button {
+.section-tab {
   padding: 0.5rem 1rem;
-  border: 2px solid color-mix(in srgb, var(--color-border) 90%, transparent);
-  background: var(--color-surface);
-  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background: #fff;
   font-weight: 600;
+  color: #64748b;
   cursor: pointer;
-  color: var(--color-muted);
   transition: all 0.2s;
 }
-
-.tabs button:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.tabs button.active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+.section-tab:hover { border-color: #20BFB6; color: #20BFB6; }
+.section-tab.active {
+  background: linear-gradient(135deg, #00AACC 0%, #00BF80 100%);
+  border-color: transparent;
   color: white;
 }
-
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.alert-error {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-}
-
-.alert-success {
-  background: var(--color-success-bg);
-  color: var(--color-success);
-}
-
-.content-block {
-  background: var(--color-surface);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
-}
-
-.filters {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-.filters input,
-.filters select {
-  padding: 0.5rem 0.75rem;
-  border: 2px solid color-mix(in srgb, var(--color-border) 90%, transparent);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.filters input {
-  min-width: 120px;
-  flex: 1;
-}
-
-@media (max-width: 768px) {
-  .admin-users .filters {
-    flex-direction: column;
-  }
-  .admin-users .filters input,
-  .admin-users .filters select {
-    min-width: 100%;
-  }
-  .admin-users .users-table th,
-  .admin-users .users-table td {
-    padding: 0.5rem;
-    font-size: 0.85rem;
-  }
-  .admin-users .form-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.users-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.users-table th,
-.users-table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
-}
-
-.users-table th {
-  font-weight: 600;
-  color: color-mix(in srgb, var(--color-heading) 85%, transparent);
-  background: color-mix(in srgb, var(--color-surface-2) 70%, var(--color-surface));
-}
-
-.users-table td.empty {
-  text-align: center;
-  color: var(--color-muted);
-  padding: 2rem;
-}
-
-.btn-sm {
-  padding: 0.35rem 0.65rem;
-  font-size: 0.8rem;
-  border-radius: 6px;
+.btn-teal {
+  background: linear-gradient(135deg, #00AACC 0%, #00BF80 100%);
   border: none;
-  cursor: pointer;
-  font-weight: 600;
-  margin-right: 0.5rem;
-}
-
-.btn-edit {
-  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
-  color: var(--color-primary-strong);
-}
-
-.btn-edit:hover {
-  background: color-mix(in srgb, var(--color-primary) 20%, var(--color-surface));
-}
-
-.btn-delete {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-}
-
-.btn-delete:hover {
-  background: color-mix(in srgb, var(--color-danger) 18%, var(--color-surface));
-}
-
-.form-add,
-.form-bulk {
-  max-width: 600px;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.35rem;
-  font-size: 0.9rem;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 2px solid color-mix(in srgb, var(--color-border) 90%, transparent);
-  border-radius: 8px;
-  font-size: 0.95rem;
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.form-group.checkbox label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.form-group.checkbox input {
-  width: auto;
-}
-
-.btn {
-  padding: 0.6rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  font-size: 0.95rem;
-}
-
-.btn-primary {
-  background: var(--color-primary);
   color: white;
+  font-weight: 600;
 }
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-strong);
+.btn-teal:hover { opacity: 0.95; color: white; }
+.btn-action {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  margin-left: 0.25rem;
 }
-
-.btn-secondary {
-  background: color-mix(in srgb, var(--color-surface-2) 70%, var(--color-surface));
-  color: var(--color-muted);
-  margin-bottom: 1rem;
-}
-
-.btn-secondary:hover {
-  background: color-mix(in srgb, var(--color-surface-2) 88%, var(--color-surface));
-}
-
-.btn-danger {
-  background: var(--color-danger);
-  color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-danger) 85%, #000);
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.bulk-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.5fr 1fr 1fr auto;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.bulk-row input,
-.bulk-row select {
-  padding: 0.4rem 0.6rem;
-  border: 2px solid color-mix(in srgb, var(--color-border) 90%, transparent);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.btn-remove {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1.2rem;
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal-content {
-  background: var(--color-surface);
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 450px;
-  width: 100%;
-  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
-}
-
-.modal-content h3 {
-  margin: 0 0 1rem 0;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-@media (max-width: 768px) {
-  .admin-users .bulk-row {
-    grid-template-columns: 1fr 1fr auto;
-  }
-  .admin-users .bulk-row input:nth-child(3),
-  .admin-users .bulk-row input:nth-child(4) {
-    grid-column: span 2;
-  }
-}
-
-.admin-users .table-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.admin-users .users-table {
-  min-width: 580px;
-}
+.btn-edit { border: 1px solid #0d6efd; color: #0d6efd; background: rgba(13, 110, 253, 0.08); }
+.btn-edit:hover { background: rgba(13, 110, 253, 0.15); color: #0d6efd; }
+.btn-delete { border: 1px solid #dc3545; color: #dc3545; background: rgba(220, 53, 69, 0.08); }
+.btn-delete:hover { background: rgba(220, 53, 69, 0.15); color: #dc3545; }
 </style>

@@ -77,8 +77,8 @@ onMounted(() => {
       aria-label="Notifications"
       @click="toggle"
     >
-      <span class="bell-icon">🔔</span>
-      <span v-if="unreadCount > 0" class="badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+      <i class="bi bi-bell bell-icon"></i>
+      <span v-if="unreadCount > 0" class="notification-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
     </button>
     <div v-if="open" class="dropdown" @click.stop>
       <div class="dropdown-header">
@@ -139,7 +139,7 @@ onMounted(() => {
 .bell-btn:hover {
   background: color-mix(in srgb, var(--color-border, #e5e7eb) 50%, transparent);
 }
-.badge {
+.notification-badge {
   position: absolute;
   top: 2px;
   right: 4px;
