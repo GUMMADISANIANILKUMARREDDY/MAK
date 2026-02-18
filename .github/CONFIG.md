@@ -4,6 +4,19 @@ Configure these in your **GitHub repo** so Actions run correctly.
 
 ---
 
+## What CI checks (safe & secure)
+
+| Area | Backend | Frontend |
+|------|---------|----------|
+| **Tests** | pytest + coverage | (add when you have tests) |
+| **Code quality** | Ruff (lint) | ESLint |
+| **Formatting / indentation** | Ruff format | Prettier |
+| **Security (code)** | Bandit | — |
+| **Security (dependencies)** | pip audit | npm audit |
+| **Build** | Docker build | `npm run build` |
+
+---
+
 ## 1. Secrets (Actions)
 
 **Path:** Repo → **Settings** → **Secrets and variables** → **Actions** → **Secrets**

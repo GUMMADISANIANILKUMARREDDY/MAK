@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.{js,vue,json,css}\"",
+    "format:check": "prettier --check \"src/**/*.{js,vue,json,css}\""
   },
   "dependencies": {
     "aos": "^2.3.4",
@@ -22,13 +26,18 @@
     "yup": "^1.7.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.15.0",
     "@tailwindcss/vite": "^4.1.18",
     "@vitejs/plugin-vue": "^6.0.3",
     "autoprefixer": "^10.4.24",
+    "eslint": "^9.15.0",
+    "eslint-plugin-vue": "^9.31.0",
     "postcss": "^8.5.6",
+    "prettier": "^3.4.2",
     "tailwindcss": "^4.1.18",
     "vite": "^7.3.1",
-    "vite-plugin-vue-devtools": "^8.0.5"
+    "vite-plugin-vue-devtools": "^8.0.5",
+    "vue-eslint-parser": "^9.4.3"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

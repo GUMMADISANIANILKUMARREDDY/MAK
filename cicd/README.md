@@ -8,8 +8,8 @@ This folder documents CI/CD for the MAK (InternHub) repo. Pipelines run on **Git
 
 | Workflow        | Path                           | Triggers                    | What it does                          |
 |----------------|---------------------------------|-----------------------------|---------------------------------------|
-| **Backend CI** | `.github/workflows/backend-ci.yml` | Push/PR to `main`/`develop` (backend changes) | Test (pytest), Lint (ruff), Docker build |
-| **Frontend CI**| `.github/workflows/frontend-ci.yml` | Push/PR to `main`/`develop` (frontend changes) | `npm ci` + `npm run build`              |
+| **Backend CI** | `.github/workflows/backend-ci.yml` | Push/PR to `main`/`develop` (backend changes) | Test + coverage, Ruff (lint + format), Bandit + pip audit, Docker build |
+| **Frontend CI**| `.github/workflows/frontend-ci.yml` | Push/PR to `main`/`develop` (frontend changes) | ESLint, Prettier, npm audit, `npm run build` |
 
 ## Running locally (same as CI)
 

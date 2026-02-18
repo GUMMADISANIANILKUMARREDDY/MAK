@@ -1,4 +1,4 @@
-# Frontend CI: install and build (Vue / Vite)
+# Frontend CI: install, build, code quality, formatting, security
 # GitHub config: see .github/CONFIG.md (secrets, branch protection)
 name: Frontend CI
 
@@ -23,8 +23,52 @@ defaults:
     working-directory: frontend
 
 jobs:
+  quality:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint (code quality & indentation)
+        run: npm run lint
+
+      - name: Prettier (format check)
+        run: npm run format:check
+
+  security:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit (dependency vulnerabilities)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
   build:
-    name: Install & Build
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -43,5 +87,4 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # Add build-time env if your app uses Vite env vars
           NODE_ENV: production
