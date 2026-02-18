@@ -55,17 +55,28 @@ async function downloadStudentProgressExcel() {
 </script>
 
 <template>
-  <div class="admin-reports">
-    <h3>Reports</h3>
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div class="report-buttons">
-      <button class="btn btn-primary" :disabled="loading" @click="downloadProjectSummaryExcel">Project Summary (Excel)</button>
-      <button class="btn btn-primary" :disabled="loading" @click="downloadProjectSummaryPdf">Project Summary (PDF)</button>
-      <button class="btn btn-primary" :disabled="loading" @click="downloadStudentProgressExcel">Student Progress (Excel)</button>
+  <div class="section-content">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title mb-4">Reports</h5>
+        <div v-if="error" class="alert alert-danger">{{ error }}</div>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-teal" :disabled="loading" @click="downloadProjectSummaryExcel">
+            <i class="bi bi-file-earmark-excel me-2"></i>Project Summary (Excel)
+          </button>
+          <button type="button" class="btn btn-teal" :disabled="loading" @click="downloadProjectSummaryPdf">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Project Summary (PDF)
+          </button>
+          <button type="button" class="btn btn-teal" :disabled="loading" @click="downloadStudentProgressExcel">
+            <i class="bi bi-file-earmark-excel me-2"></i>Student Progress (Excel)
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.report-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.btn-teal { background: linear-gradient(135deg, #00AACC 0%, #00BF80 100%); border: none; color: white; font-weight: 600; }
+.btn-teal:hover { opacity: 0.95; color: white; }
 </style>

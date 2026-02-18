@@ -104,9 +104,17 @@ def assign_project_to_manager(projectid: str, manager_userid: str, assigned_by: 
 
 
 def get_project_managers(projectid: str) -> dict:
-    """Get all managers assigned to a project."""
+    """Get all managers assigned to a project with username."""
     result = supabase.table("project_assignments").select("*").eq("projectid", projectid).execute()
-    return {"success": True, "managers": result.data or []}
+    assignments = result.data or []
+    managers = []
+    for a in assignments:
+        mid = a.get("manager_userid")
+        if mid:
+            ur = supabase.table("users").select("userid, username").eq("userid", mid).limit(1).execute()
+            u = ur.data[0] if ur.data else {}
+            managers.append({"manager_userid": mid, "username": u.get("username", "")})
+    return {"success": True, "managers": managers}
 
 
 def get_manager_projects(manager_userid: str) -> dict:

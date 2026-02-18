@@ -315,24 +315,21 @@ const moreActions = ref([
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* Advanced color palette */
+/* MAK brand color palette (from logo) */
 .home {
-  /* Requested palette mapping:
-     - yellow replaces old "orange" accents
-     - green replaces old "teal" accents
-     - slate stays for text */
-  --orange: #facc15; /* light yellow accent */
-  --orange-glow: rgba(250, 204, 21, 0.35);
-  --orange-soft: #fefce8;
-  --green: #10b981;
-  --green-glow: rgba(16, 185, 129, 0.35);
-  --green-soft: #ecfdf5;
-  --blue: #2563eb;
-  --blue-glow: rgba(37, 99, 235, 0.32);
-  --blue-soft: #f0f9ff;
-  --teal: #22c55e; /* green (match palette) */
-  --teal-glow: rgba(34, 197, 94, 0.28);
-  --teal-soft: #f0fdf4;
+  --orange: #AADD00; /* MAK lime */
+  --orange-glow: rgba(170, 221, 0, 0.35);
+  --orange-soft: #e8ffcc;
+  --green: #33CC66; /* MAK green */
+  --green-glow: rgba(51, 204, 102, 0.35);
+  --green-soft: #e6faf0;
+  --blue: #2080FF; /* MAK blue */
+  --blue-glow: rgba(32, 128, 255, 0.32);
+  --blue-soft: #e6f2ff;
+  --teal: #00BF80; /* MAK teal */
+  --teal-glow: rgba(0, 191, 128, 0.28);
+  --teal-soft: #e0faf5;
+  --cyan: #00AACC; /* MAK cyan */
   --white: #ffffff;
   --slate: #1e293b;
   --slate-muted: #64748b;
@@ -347,11 +344,11 @@ const moreActions = ref([
   left: 0;
   right: 0;
   z-index: 100;
-  background: linear-gradient(120deg, #ffffff 0%, #e0f2fe 35%, #fef9c3 70%, #f0f9ff 100%);
+  background: linear-gradient(120deg, #ffffff 0%, #e0faf5 35%, #e8ffcc 70%, #e6f2ff 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(37, 99, 235, 0.15);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 191, 128, 0.2);
+  box-shadow: 0 4px 24px rgba(0, 170, 204, 0.08);
 }
 
 /* Reserve space so content is not under fixed nav */
@@ -448,7 +445,7 @@ const moreActions = ref([
 }
 
 .nav-links a:hover {
-  color: #1d4ed8;
+  color: var(--blue);
   background: transparent !important; /* remove blue hover square */
 }
 
@@ -489,7 +486,7 @@ const moreActions = ref([
 }
 
 .btn-register:hover {
-  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 10px 26px rgba(32, 128, 255, 0.3);
 }
 
 /* Hamburger button - hidden on desktop */
@@ -518,7 +515,7 @@ const moreActions = ref([
 }
 
 .hamburger:hover {
-  background: rgba(37, 99, 235, 0.10);
+  background: rgba(32, 128, 255, 0.12);
 }
 
 .hamburger-open span:nth-child(1) {
@@ -540,9 +537,9 @@ const moreActions = ref([
   top: 100%;
   left: 0;
   right: 0;
-  background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 40%, #fef9c3 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #e0faf5 40%, #e8ffcc 100%);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(37, 99, 235, 0.15);
+  border-bottom: 1px solid rgba(0, 191, 128, 0.2);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   max-height: 0;
   overflow: hidden;
@@ -575,8 +572,8 @@ const moreActions = ref([
 }
 
 .nav-dropdown-links a:hover {
-  background: rgba(37, 99, 235, 0.12);
-  color: #1d4ed8;
+  background: rgba(32, 128, 255, 0.12);
+  color: var(--blue);
 }
 
 .nav-dropdown-actions {
@@ -607,11 +604,11 @@ const moreActions = ref([
   inset: 0;
   background: linear-gradient(
     160deg,
-    #f0f9ff 0%,
-    #ecfdf5 25%,
-    #f0fdf4 50%,
-    #fefce8 75%,
-    #f0f9ff 100%
+    #e6f2ff 0%,
+    #e0faf5 25%,
+    #e6faf0 50%,
+    #e8ffcc 75%,
+    #e6f2ff 100%
   );
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
@@ -642,7 +639,7 @@ const moreActions = ref([
 .hero-blob-2 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, var(--orange-glow), #fef9c3);
+  background: linear-gradient(135deg, var(--orange-glow), #e8ffcc);
   bottom: -100px;
   left: -100px;
   animation-delay: -7s;
@@ -667,7 +664,7 @@ const moreActions = ref([
 .hero-pattern {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(37, 99, 235, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(32, 128, 255, 0.08) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events: none;
 }
@@ -683,8 +680,8 @@ const moreActions = ref([
 .hero-badge {
   display: inline-block;
   padding: 0.4rem 1rem;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(34, 197, 94, 0.12));
-  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: linear-gradient(135deg, rgba(32, 128, 255, 0.14), rgba(0, 191, 128, 0.12));
+  border: 1px solid rgba(32, 128, 255, 0.25);
   border-radius: 50px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -762,12 +759,12 @@ const moreActions = ref([
 .btn-primary {
   background: linear-gradient(135deg, var(--blue), var(--teal));
   color: var(--white);
-  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.22);
+  box-shadow: 0 12px 26px rgba(32, 128, 255, 0.25);
 }
 
 .btn-primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 16px 36px rgba(32, 128, 255, 0.3);
 }
 
 .btn-outline {
@@ -829,35 +826,35 @@ const moreActions = ref([
 }
 
 .stat-orange {
-  background: linear-gradient(180deg, #fffbeb 0%, var(--white) 100%);
+  background: linear-gradient(180deg, #f7ffcc 0%, var(--white) 100%);
 }
 
 .stat-orange::before {
-  background: linear-gradient(90deg, var(--orange), #fde047);
+  background: linear-gradient(90deg, var(--orange), #CCFF33);
 }
 
 .stat-green {
-  background: linear-gradient(180deg, #f0fdf8 0%, var(--white) 100%);
+  background: linear-gradient(180deg, #e6faf0 0%, var(--white) 100%);
 }
 
 .stat-green::before {
-  background: linear-gradient(90deg, var(--green), #34d399);
+  background: linear-gradient(90deg, var(--green), #66CC33);
 }
 
 .stat-blue {
-  background: linear-gradient(180deg, #f0faff 0%, var(--white) 100%);
+  background: linear-gradient(180deg, #e6f2ff 0%, var(--white) 100%);
 }
 
 .stat-blue::before {
-  background: linear-gradient(90deg, var(--blue), #38bdf8);
+  background: linear-gradient(90deg, var(--blue), #00AACC);
 }
 
 .stat-teal {
-  background: linear-gradient(180deg, #f0fdf4 0%, var(--white) 100%);
+  background: linear-gradient(180deg, #e0faf5 0%, var(--white) 100%);
 }
 
 .stat-teal::before {
-  background: linear-gradient(90deg, var(--teal), #86efac);
+  background: linear-gradient(90deg, var(--teal), #33CC66);
 }
 
 .stat-icon {
@@ -894,7 +891,7 @@ const moreActions = ref([
 /* More context section */
 .context-section {
   padding: 4rem 2rem 5rem;
-  background: linear-gradient(180deg, #f8fafc 0%, #f0f9ff 50%, #f8fafc 100%);
+  background: linear-gradient(180deg, #f0fdf9 0%, #e6f2ff 50%, #f0fdf9 100%);
 }
 
 .context-container {
@@ -954,10 +951,10 @@ const moreActions = ref([
   position: relative;
 }
 
-.context-blue::before { background: linear-gradient(90deg, var(--blue), #38bdf8); }
-.context-green::before { background: linear-gradient(90deg, var(--green), #34d399); }
-.context-orange::before { background: linear-gradient(90deg, var(--orange), #fde047); }
-.context-teal::before { background: linear-gradient(90deg, var(--teal), #86efac); }
+.context-blue::before { background: linear-gradient(90deg, var(--blue), #00AACC); }
+.context-green::before { background: linear-gradient(90deg, var(--green), #66CC33); }
+.context-orange::before { background: linear-gradient(90deg, var(--orange), #CCFF33); }
+.context-teal::before { background: linear-gradient(90deg, var(--teal), #33CC66); }
 
 .context-icon {
   display: block;
@@ -987,7 +984,7 @@ const moreActions = ref([
 /* More actions section */
 .actions-section {
   padding: 3rem 2rem 5rem;
-  background: linear-gradient(180deg, #f0f9ff 0%, #ecfdf5 100%);
+  background: linear-gradient(180deg, #e6f2ff 0%, #e0faf5 100%);
 }
 
 .actions-container {
@@ -1041,12 +1038,12 @@ const moreActions = ref([
 .action-primary {
   background: linear-gradient(135deg, var(--blue), var(--teal));
   color: var(--white);
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 8px 24px rgba(32, 128, 255, 0.25);
 }
 
 .action-primary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 12px 28px rgba(32, 128, 255, 0.3);
 }
 
 .action-outline {
@@ -1062,14 +1059,14 @@ const moreActions = ref([
 }
 
 .action-secondary {
-  background: linear-gradient(135deg, var(--orange), #fde047);
+  background: linear-gradient(135deg, var(--orange), #CCFF33);
   color: var(--slate);
   border-color: transparent;
 }
 
 .action-secondary:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(250, 204, 21, 0.3);
+  box-shadow: 0 10px 24px rgba(170, 221, 0, 0.35);
 }
 
 .action-icon {
@@ -1114,19 +1111,19 @@ const moreActions = ref([
 }
 
 .programs-section {
-  background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #e6f2ff 0%, #ffffff 100%);
 }
 
 .hackathons-section {
-  background: linear-gradient(180deg, #ecfdf5 0%, #f0f9ff 100%);
+  background: linear-gradient(180deg, #e0faf5 0%, #e6f2ff 100%);
 }
 
 .technologies-section {
-  background: linear-gradient(180deg, #f0f9ff 0%, #ecfdf5 100%);
+  background: linear-gradient(180deg, #e6f2ff 0%, #e0faf5 100%);
 }
 
 .contact-section {
-  background: linear-gradient(180deg, #fefce8 0%, #f8fafc 100%);
+  background: linear-gradient(180deg, #e8ffcc 0%, #f0fdf9 100%);
 }
 
 .contact-block {
@@ -1477,8 +1474,8 @@ const moreActions = ref([
   width: 36px;
   height: 36px;
   border: none;
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--color-surface-2);
+  color: var(--slate-muted);
   font-size: 1.5rem;
   border-radius: 50%;
   cursor: pointer;
