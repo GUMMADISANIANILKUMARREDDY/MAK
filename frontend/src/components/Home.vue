@@ -1490,6 +1490,8 @@ const moreActions = ref([
   color: #334155;
 }
 
+
+
 @media (max-width: 640px) {
   .modal-content {
     padding: 2rem 1.5rem;
