@@ -1,6 +1,7 @@
 import axios from 'axios'
+import { disconnectChatWebSocket } from './chatWebSocket'
 
-const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'https://mak-a3dk.onrender.com'
+const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8001'
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -299,6 +300,12 @@ export const chatApi = {
   getConversations() {
     return api.get('/chat/conversations').then(res => res.data)
   },
+  getOnlineStatus() {
+    return api.get('/chat/online-status').then(res => res.data)
+  },
+  searchAvailableUsers(q = '') {
+    return api.get('/chat/available-users', { params: { q, limit: 20 } }).then(res => res.data)
+  },
   getOrCreateWith(otherUserid) {
     return api.get(`/chat/conversations/with/${otherUserid}`).then(res => res.data)
   },
@@ -405,6 +412,7 @@ export const authService = {
   },
 
   logout() {
+    disconnectChatWebSocket()
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
   },

@@ -125,14 +125,20 @@ onMounted(() => {
 <style scoped>
 .notification-bell-wrap {
   position: relative;
+  flex-shrink: 0;
 }
 .bell-btn {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
   padding: 8px 12px;
   font-size: 1.25rem;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 8px;
   color: var(--color-text, #374151);
 }
@@ -159,7 +165,7 @@ onMounted(() => {
   top: 100%;
   right: 0;
   margin-top: 8px;
-  width: 320px;
+  width: min(320px, calc(100vw - 24px));
   max-height: 400px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);

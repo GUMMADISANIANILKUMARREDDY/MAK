@@ -1,7 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { authService } from '@/services/api'
+import { connectChatWebSocket, disconnectChatWebSocket } from '@/services/chatWebSocket'
+import { setupPush } from '@/services/pushNotifications'
 import AdminUsers from '../admin/AdminUsers.vue'
 import AdminStudents from '../admin/AdminStudents.vue'
 import AdminProjects from '../admin/AdminProjects.vue'
@@ -24,6 +26,7 @@ import CollegeAdminOverview from './overview/CollegeAdminOverview.vue'
 import NotificationBell from './NotificationBell.vue'
 
 const router = useRouter()
+const route = useRoute()
 const user = ref(null)
 const loading = ref(true)
 const activeSection = ref('overview')
@@ -38,6 +41,8 @@ onMounted(async () => {
     router.push('/home')
     return
   }
+  connectChatWebSocket()
+  setupPush().catch(() => {})
   const stored = localStorage.getItem('user')
   if (stored) {
     try {
@@ -63,7 +68,16 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  const tab = route.query?.tab
+  const conv = route.query?.conversation
+  if (tab === 'chat') activeSection.value = 'chat'
+  initialConversationId.value = conv || null
 })
+
+watch(() => route.query, (q) => {
+  if (q?.tab === 'chat') activeSection.value = 'chat'
+  if (q?.conversation) initialConversationId.value = q.conversation
+}, { immediate: false })
 
 const username = computed(() => user.value?.username || user.value?.email || user.value?.userid || 'User')
 const role = computed(() => user.value?.role || 'student')
@@ -88,7 +102,7 @@ const menuItems = computed(() => {
     { id: 'my-modules', label: 'My Modules', icon: 'bi-grid-3x3-gap', roles: ['mentor'] },
     { id: 'teams', label: 'Teams', icon: 'bi-people', roles: ['mentor'] },
     { id: 'tasks', label: 'Tasks', icon: 'bi-list-check', roles: ['mentor'] },
-    { id: 'chat', label: 'Chat', icon: 'bi-chat-dots', roles: ['mentor', 'student'] },
+    { id: 'chat', label: 'Chat', icon: 'bi-chat-dots', roles: ['mentor', 'student', 'admin', 'manager', 'clgadmin'] },
     { id: 'my-tasks', label: 'My Tasks', icon: 'bi-list-check', roles: ['student'] },
   ]
   return allItems.filter(item => item.roles.includes(role.value))
@@ -106,6 +120,7 @@ const OverviewComponent = computed(() => {
 
 const handleLogout = () => {
   userDropdownOpen.value = false
+  disconnectChatWebSocket()
   localStorage.removeItem('access_token')
   localStorage.removeItem('refresh_token')
   localStorage.removeItem('user')
@@ -132,7 +147,12 @@ function closeUserDropdown() {
   userDropdownOpen.value = false
 }
 
+function onChatReady() {
+  initialConversationId.value = null
+}
+
 const userDropdownRef = ref(null)
+const initialConversationId = ref(null)
 function onDocClick(e) {
   if (userDropdownRef.value && !userDropdownRef.value.contains(e.target)) {
     closeUserDropdown()
@@ -235,7 +255,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
           <MentorTeams v-else-if="activeSection === 'teams'" />
           <MentorTasks v-else-if="activeSection === 'tasks'" />
           <StudentMyTasks v-else-if="activeSection === 'my-tasks'" />
-          <ChatView v-else-if="activeSection === 'chat'" />
+          <ChatView v-else-if="activeSection === 'chat'" :initial-conversation-id="initialConversationId" @ready="onChatReady" />
           <div v-else class="card">
             <div class="card-body">
               <h5>{{ activeSection }}</h5>
@@ -432,6 +452,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   min-height: var(--top-bar-height);
   padding: 0 1.5rem;
   background: white;
+  overflow: visible;
   border-bottom: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   position: sticky;
@@ -457,7 +478,8 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .search-wrap {
@@ -636,6 +658,14 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
   }
   .user-name {
     display: none;
+  }
+  .top-bar-actions :deep(.notification-bell-wrap) {
+    flex-shrink: 0;
+  }
+  .top-bar-actions :deep(.bell-btn) {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
   }
 }
 </style>

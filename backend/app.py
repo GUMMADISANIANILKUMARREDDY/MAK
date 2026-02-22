@@ -39,6 +39,7 @@ from api.routes.export_routes import router as export_router
 from api.routes.admin_colleges import router as admin_colleges_router
 from api.routes.admin_permissions import router as admin_permissions_router
 from api.routes.chat import router as chat_router
+from api.routes.push import router as push_router
 from api.routes.reports import router as reports_router
 
 app = FastAPI(title="InternHub API", version="1.0.0")
@@ -74,6 +75,7 @@ app.include_router(export_router)
 app.include_router(admin_colleges_router)
 app.include_router(admin_permissions_router)
 app.include_router(chat_router)
+app.include_router(push_router)
 app.include_router(reports_router)
 
 

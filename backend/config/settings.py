@@ -40,6 +40,11 @@ class Settings:
     # File upload: max size bytes (default 10MB), allowed extensions
     UPLOAD_MAX_SIZE_MB: int = int(os.getenv("UPLOAD_MAX_SIZE_MB", "10"))
     UPLOAD_ALLOWED_EXTENSIONS: str = os.getenv("UPLOAD_ALLOWED_EXTENSIONS", "pdf,doc,docx,txt,xls,xlsx")
+    # Frontend URL for links in emails/notifications (e.g. http://localhost:5173 or https://yourapp.com)
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    # Web Push VAPID keys (generate with: py -m py_vapid --applicationServerKey)
+    VAPID_PUBLIC_KEY: str = os.getenv("VAPID_PUBLIC_KEY", "")
+    VAPID_PRIVATE_KEY: str = os.getenv("VAPID_PRIVATE_KEY", "")
 
 
 settings = Settings()

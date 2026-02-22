@@ -183,3 +183,15 @@ def get_mentor_assigned_plain(module_title: str, link: str = "") -> str:
     if link:
         body += f"\n\nView: {link}"
     return f"{APP_NAME}\n\n{body}\n\nBest regards,\nThe {APP_NAME} Team"
+
+
+def get_chat_message_subject(sender_username: str) -> str:
+    return f"New message from {sender_username} – {APP_NAME}"
+
+
+def get_chat_message_plain(sender_username: str, message_preview: str, link: str = "") -> str:
+    preview = (message_preview or "")[:200] + ("..." if len(message_preview or "") > 200 else "")
+    body = f"{sender_username} sent you a message:\n\n\"{preview}\""
+    if link:
+        body += f"\n\nOpen chat: {link}"
+    return f"{APP_NAME}\n\n{body}\n\nBest regards,\nThe {APP_NAME} Team"
