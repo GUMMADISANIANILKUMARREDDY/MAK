@@ -9,6 +9,7 @@ NOTIFICATION_TYPES = (
     "task_reviewed",
     "student_added_to_team",
     "mentor_assigned",
+    "chat_message",
 )
 
 
@@ -164,3 +165,13 @@ def notify_mentor_assigned(userid: str, module_title: str, link: str = "") -> No
     if email:
         from services.email_service import send_mentor_assigned_email
         send_mentor_assigned_email(email, module_title, link)
+
+
+def notify_chat_message(recipient_userid: str, sender_username: str, message_preview: str, link: str = "") -> None:
+    """Create in-app notification and send email when someone sends a chat message (for offline recipients)."""
+    preview = (message_preview or "")[:100] + ("..." if len(message_preview or "") > 100 else "")
+    create_notification(recipient_userid, "chat_message", f"New message from {sender_username}", preview, link)
+    email = _get_user_email(recipient_userid)
+    if email:
+        from services.email_service import send_chat_message_email
+        send_chat_message_email(email, sender_username, message_preview, link)

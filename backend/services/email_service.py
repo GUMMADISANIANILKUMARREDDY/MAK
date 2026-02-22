@@ -20,6 +20,8 @@ from utils.email_templates import (
     get_student_added_to_team_plain,
     get_mentor_assigned_subject,
     get_mentor_assigned_plain,
+    get_chat_message_subject,
+    get_chat_message_plain,
 )
 
 
@@ -119,4 +121,12 @@ def send_student_added_to_team_email(to_email: str, team_name: str, link: str = 
 def send_mentor_assigned_email(to_email: str, module_title: str, link: str = "") -> bool:
     return _send_plain_email(
         to_email, get_mentor_assigned_subject(), get_mentor_assigned_plain(module_title, link)
+    )
+
+
+def send_chat_message_email(to_email: str, sender_username: str, message_preview: str, link: str = "") -> bool:
+    return _send_plain_email(
+        to_email,
+        get_chat_message_subject(sender_username),
+        get_chat_message_plain(sender_username, message_preview, link),
     )
