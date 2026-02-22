@@ -2,8 +2,7 @@
  * WebSocket service for real-time chat.
  * Connects to backend /chat/ws, receives new_message events and notifies subscribers.
  */
-
-const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8001'
+import { API_BASE_URL } from '@/config/api'
 
 function getWsUrl() {
   const base = API_BASE_URL.replace(/^https?:\/\//, '')
