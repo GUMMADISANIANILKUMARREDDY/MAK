@@ -3,8 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
 const props = defineProps({ initialConversationId: { type: String, default: null } })
 const emit = defineEmits(['ready'])
-import { chatApi } from '@/services/api'
-import { connectChatWebSocket, onNewMessage, onMessagesRead, onTyping, onPresence, sendTyping } from '@/services/chatWebSocket'
+import { chatApi, connectChatWebSocket, onNewMessage, onMessagesRead, onTyping, onPresence, sendTyping } from '@/services/api'
 
 const currentUserid = computed(() => {
   try {

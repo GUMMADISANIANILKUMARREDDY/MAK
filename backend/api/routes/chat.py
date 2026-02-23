@@ -124,7 +124,7 @@ async def send_message_route(
             sender_username = current_user.get("username") or current_user["sub"]
             try:
                 from services.notification_service import notify_chat_message
-                notify_chat_message(recipient_userid, sender_username, data.body or "", link)
+                notify_chat_message(recipient_userid, sender_username, data.body or "", link, msg.get("id"))
             except Exception:
                 pass
             try:
@@ -157,9 +157,13 @@ async def chat_websocket(websocket: WebSocket):
     partners = get_conversation_partners(userid)
     online_set = chat_manager.get_online_userids()
     partners_online = [p for p in partners if p in online_set]
-    await websocket.send_text(json.dumps({"type": "online_status", "online_userids": partners_online}))
-    for pid in partners:
-        await chat_manager.send_to_user(pid, json.dumps({"type": "user_online", "userid": userid}))
+    try:
+        await websocket.send_text(json.dumps({"type": "online_status", "online_userids": partners_online}))
+        for pid in partners:
+            await chat_manager.send_to_user(pid, json.dumps({"type": "user_online", "userid": userid}))
+    except WebSocketDisconnect:
+        chat_manager.disconnect(websocket, userid)
+        return
     try:
         while True:
             data = await websocket.receive_text()

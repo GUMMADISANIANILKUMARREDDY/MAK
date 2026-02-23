@@ -1,9 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { authService } from '@/services/api'
-import { connectChatWebSocket, disconnectChatWebSocket } from '@/services/chatWebSocket'
-import { setupPush } from '@/services/pushNotifications'
+import { authService, connectChatWebSocket, disconnectChatWebSocket, setupPush } from '@/services/api'
 import AdminUsers from '../admin/AdminUsers.vue'
 import AdminStudents from '../admin/AdminStudents.vue'
 import AdminProjects from '../admin/AdminProjects.vue'
@@ -237,31 +235,33 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
           <div class="spinner-border text-primary" role="status"></div>
         </div>
         <div v-else class="dashboard-content">
-          <component
-            v-if="activeSection === 'overview'"
-            :is="OverviewComponent"
-            :username="username"
-          />
-          <AdminProjects v-else-if="activeSection === 'projects'" />
-          <AdminUsers v-else-if="activeSection === 'users'" />
-          <AdminStudents v-else-if="activeSection === 'students'" />
-          <AdminActivityLogs v-else-if="activeSection === 'activity-logs'" />
-          <AdminColleges v-else-if="activeSection === 'colleges'" />
-          <AdminPermissions v-else-if="activeSection === 'permissions'" />
-          <AdminReports v-else-if="activeSection === 'reports'" />
-          <ManagerMyProjects v-else-if="activeSection === 'my-projects'" />
-          <ManagerModules v-else-if="activeSection === 'modules'" />
-          <MentorMyModules v-else-if="activeSection === 'my-modules'" />
-          <MentorTeams v-else-if="activeSection === 'teams'" />
-          <MentorTasks v-else-if="activeSection === 'tasks'" />
-          <StudentMyTasks v-else-if="activeSection === 'my-tasks'" />
-          <ChatView v-else-if="activeSection === 'chat'" :initial-conversation-id="initialConversationId" @ready="onChatReady" />
-          <div v-else class="card">
-            <div class="card-body">
-              <h5>{{ activeSection }}</h5>
-              <p class="text-muted mb-0">Content coming soon.</p>
+          <ChatView v-show="activeSection === 'chat'" :initial-conversation-id="initialConversationId" @ready="onChatReady" />
+          <template v-show="activeSection !== 'chat'">
+            <component
+              v-if="activeSection === 'overview'"
+              :is="OverviewComponent"
+              :username="username"
+            />
+            <AdminProjects v-else-if="activeSection === 'projects'" />
+            <AdminUsers v-else-if="activeSection === 'users'" />
+            <AdminStudents v-else-if="activeSection === 'students'" />
+            <AdminActivityLogs v-else-if="activeSection === 'activity-logs'" />
+            <AdminColleges v-else-if="activeSection === 'colleges'" />
+            <AdminPermissions v-else-if="activeSection === 'permissions'" />
+            <AdminReports v-else-if="activeSection === 'reports'" />
+            <ManagerMyProjects v-else-if="activeSection === 'my-projects'" />
+            <ManagerModules v-else-if="activeSection === 'modules'" />
+            <MentorMyModules v-else-if="activeSection === 'my-modules'" />
+            <MentorTeams v-else-if="activeSection === 'teams'" />
+            <MentorTasks v-else-if="activeSection === 'tasks'" />
+            <StudentMyTasks v-else-if="activeSection === 'my-tasks'" />
+            <div v-else class="card">
+              <div class="card-body">
+                <h5>{{ activeSection }}</h5>
+                <p class="text-muted mb-0">Content coming soon.</p>
+              </div>
             </div>
-          </div>
+          </template>
         </div>
       </main>
     </div>

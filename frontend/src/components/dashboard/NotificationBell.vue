@@ -164,9 +164,9 @@ onMounted(() => {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 8px;
-  width: min(320px, calc(100vw - 24px));
-  max-height: 400px;
+  margin-top: 6px;
+  width: min(280px, calc(100vw - 24px));
+  max-height: 320px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 12px;
@@ -179,12 +179,12 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 14px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--color-border, #e5e7eb);
   font-weight: 600;
 }
 .mark-all {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-primary, #2563eb);
   background: none;
   border: none;
@@ -192,23 +192,23 @@ onMounted(() => {
 }
 .dropdown-loading,
 .dropdown-empty {
-  padding: 24px;
+  padding: 12px;
   text-align: center;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 12px;
 }
 .dropdown-list {
   list-style: none;
   margin: 0;
-  padding: 8px 0;
+  padding: 4px 0;
   overflow-y: auto;
-  max-height: 320px;
+  max-height: 260px;
 }
 .dropdown-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 6px;
+  padding: 8px 10px;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border, #e5e7eb) 50%, transparent);
   cursor: default;
 }
@@ -218,8 +218,8 @@ onMounted(() => {
 }
 .dismiss-btn {
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
   background: transparent;
@@ -233,22 +233,27 @@ onMounted(() => {
   color: #ef4444;
   background: color-mix(in srgb, #ef4444 15%, transparent);
 }
+.dropdown-item strong {
+  font-size: 12px;
+  font-weight: 600;
+}
 .dropdown-item.unread {
   background: color-mix(in srgb, var(--color-primary, #2563eb) 8%, transparent);
   cursor: pointer;
 }
 .dropdown-item .msg {
-  margin: 4px 0 0 0;
-  font-size: 13px;
+  margin: 2px 0 0 0;
+  font-size: 11px;
   color: #6b7280;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 220px;
 }
 .dropdown-item .time {
   display: block;
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 2px;
+  font-size: 10px;
   color: #9ca3af;
 }
 .backdrop {
