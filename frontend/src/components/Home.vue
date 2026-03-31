@@ -655,6 +655,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleEsc))
   }
 }
 
+
+
 @media (max-width: 640px) {
   .hero-title {
     font-size: 2.2rem;
